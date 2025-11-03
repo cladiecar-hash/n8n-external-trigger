@@ -353,36 +353,13 @@ async function sendToWebhook() {
     document.getElementById('sendBtn').disabled = true;
     sendStatus.style.display = 'block';
     sendStatus.className = 'status-box';
-    sendStatus.innerHTML = '<div class="loading">Scaricamento del file da Google Drive</div>';
+    sendStatus.innerHTML = '<div class="loading">Invio al webhook n8n</div>';
 
     try {
-        // Scarica il file da Google Drive
-        const response = await gapi.client.drive.files.get({
-            fileId: selectedFile.id,
-            alt: 'media'
-        }, {
-            responseType: 'blob'
-        });
-
-        sendStatus.innerHTML = '<div class="loading">Preparazione dell\'invio al webhook</div>';
-
-        // Converti il blob in base64
-        const fileBlob = new Blob([response.body], { type: 'application/pdf' });
-        const base64Data = await blobToBase64(fileBlob);
-
-        sendStatus.innerHTML = '<div class="loading">Invio al webhook n8n</div>';
-
-        // Prepara i dati da inviare
+        // Prepara i dati da inviare (solo File ID e PBS Code)
         const payload = {
-            pbsCode: pbsCode,
-            fileName: selectedFile.name,
-            fileSize: selectedFile.size,
             fileId: selectedFile.id,
-            modifiedTime: selectedFile.modifiedTime,
-            webViewLink: selectedFile.webViewLink || '',
-            fileData: base64Data,
-            mimeType: 'application/pdf',
-            timestamp: new Date().toISOString()
+            pbsCode: pbsCode
         };
 
         // Invia al webhook
@@ -403,9 +380,9 @@ async function sendToWebhook() {
         sendStatus.className = 'status-box success';
         sendStatus.innerHTML = `
             <h3>✓ Invio Completato!</h3>
-            <p><strong>File:</strong> ${selectedFile.name}</p>
+            <p><strong>File ID:</strong> ${selectedFile.id}</p>
+            <p><strong>Nome File:</strong> ${selectedFile.name}</p>
             <p><strong>Codice PBS:</strong> ${pbsCode}</p>
-            <p><strong>Dimensione:</strong> ${formatFileSize(selectedFile.size)}</p>
             <p><strong>Timestamp:</strong> ${new Date().toLocaleString('it-IT')}</p>
             ${result.message ? `<p><strong>Risposta:</strong> ${result.message}</p>` : ''}
         `;

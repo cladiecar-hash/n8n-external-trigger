@@ -98,29 +98,22 @@ Applicazione web per inviare file PDF da Google Drive a un webhook n8n con codic
 
 ### Esempio di Workflow n8n
 
-Il webhook riceverà un payload JSON con questi dati:
+Il webhook riceverà un payload JSON semplice con questi dati:
 
 ```json
 {
-  "pbsCode": "PBS12345ABC",
-  "fileName": "documento.pdf",
-  "fileSize": 1234567,
   "fileId": "1abc...xyz",
-  "modifiedTime": "2024-01-15T10:30:00.000Z",
-  "webViewLink": "https://drive.google.com/file/d/...",
-  "fileData": "base64_encoded_pdf_content...",
-  "mimeType": "application/pdf",
-  "timestamp": "2024-01-15T10:35:00.000Z"
+  "pbsCode": "PBS-12345_ABC"
 }
 ```
 
-Puoi processare questi dati come preferisci in n8n:
-- Salvare il PDF su disco
-- Inviare via email
-- Caricare su un altro storage
-- Processare con AI/OCR
-- Salvare in database
-- ecc.
+**Nota**: L'applicazione invia solo l'ID del file Google Drive e il codice PBS. Il tuo workflow n8n può poi utilizzare il `fileId` per scaricare il file direttamente da Google Drive quando necessario, utilizzando il nodo "Google Drive" di n8n.
+
+Vantaggi di questo approccio:
+- ⚡ Invio molto più veloce (non scarica il file intero)
+- 💾 Meno dati da trasferire
+- 🔄 n8n può scaricare il file on-demand
+- 🔐 Maggiore sicurezza (file rimane su Google Drive)
 
 ## 💻 Installazione e Uso
 
@@ -267,17 +260,20 @@ Se ricevi errori CORS, assicurati che il webhook n8n accetti richieste dal tuo d
 
 ```json
 {
-  "pbsCode": "string (codice PBS alfanumerico)",
-  "fileName": "string (nome del file)",
-  "fileSize": "number (dimensione in bytes)",
-  "fileId": "string (ID Google Drive)",
-  "modifiedTime": "string (data ultima modifica ISO 8601)",
-  "webViewLink": "string (link Google Drive)",
-  "fileData": "string (contenuto PDF in base64)",
-  "mimeType": "string (sempre 'application/pdf')",
-  "timestamp": "string (data invio ISO 8601)"
+  "fileId": "string (ID del file su Google Drive)",
+  "pbsCode": "string (codice PBS con lettere, numeri, - e _)"
 }
 ```
+
+**Esempio reale**:
+```json
+{
+  "fileId": "1a2b3c4d5e6f7g8h9i0j",
+  "pbsCode": "PBS-12345_TEST"
+}
+```
+
+Il workflow n8n può utilizzare il `fileId` per scaricare il file da Google Drive usando il nodo "Google Drive" con l'operazione "Download File".
 
 ## 🎨 Personalizzazione
 
