@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Drive PDF to n8n Webhook</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📄 Google Drive PDF to n8n</h1>
+
+        <!-- Sezione Configurazione -->
+        <div id="configSection" class="section">
+            <h2>Configurazione Google Drive API</h2>
+            <div class="info-box">
+                <p><strong>Prima configurazione:</strong> Inserisci le tue credenziali Google API.</p>
+                <p><small>Le credenziali verranno salvate nel browser e potrai modificarle in seguito.</small></p>
+            </div>
+
+            <div class="form-group">
+                <label for="clientId">Google Client ID:</label>
+                <input type="text" id="clientId" placeholder="xxxxx.apps.googleusercontent.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="apiKey">Google API Key:</label>
+                <input type="text" id="apiKey" placeholder="La tua API Key" required>
+            </div>
+
+            <div class="form-group">
+                <label for="webhookUrl">URL Webhook n8n:</label>
+                <input type="url" id="webhookUrl" placeholder="https://your-n8n-instance.com/webhook/..." required>
+            </div>
+
+            <div class="button-group">
+                <button id="saveConfig" class="btn btn-primary">Salva Configurazione</button>
+                <button id="editConfig" class="btn btn-secondary" style="display: none;">Modifica Configurazione</button>
+            </div>
+        </div>
+
+        <!-- Sezione Autenticazione -->
+        <div id="authSection" class="section" style="display: none;">
+            <h2>Autenticazione Google Drive</h2>
+            <div id="authStatus" class="status-box">
+                <p>Non autenticato</p>
+            </div>
+            <button id="authorizeBtn" class="btn btn-primary">Connetti a Google Drive</button>
+            <button id="signoutBtn" class="btn btn-secondary" style="display: none;">Disconnetti</button>
+        </div>
+
+        <!-- Sezione Selezione File -->
+        <div id="fileSection" class="section" style="display: none;">
+            <h2>Seleziona File PDF</h2>
+
+            <div class="form-group">
+                <label for="folderSearch">Cerca Cartella (opzionale):</label>
+                <input type="text" id="folderSearch" placeholder="Nome cartella...">
+                <button id="searchFolderBtn" class="btn btn-secondary">Cerca</button>
+            </div>
+
+            <div id="folderList" class="file-list"></div>
+
+            <div class="form-group">
+                <label for="fileSearch">Cerca File PDF:</label>
+                <input type="text" id="fileSearch" placeholder="Nome file...">
+                <button id="searchFileBtn" class="btn btn-secondary">Cerca PDF</button>
+            </div>
+
+            <div id="fileList" class="file-list"></div>
+
+            <div id="selectedFile" class="selected-file" style="display: none;">
+                <h3>File Selezionato:</h3>
+                <p id="selectedFileName"></p>
+                <button id="clearSelection" class="btn btn-small">Rimuovi Selezione</button>
+            </div>
+        </div>
+
+        <!-- Sezione Codice PBS e Invio -->
+        <div id="sendSection" class="section" style="display: none;">
+            <h2>Codice PBS e Invio</h2>
+
+            <div class="form-group">
+                <label for="pbsCode">Codice PBS (alfanumerico):</label>
+                <input type="text" id="pbsCode" placeholder="Es: PBS12345ABC" pattern="[A-Za-z0-9]+" required>
+                <small>Solo caratteri alfanumerici (lettere e numeri)</small>
+            </div>
+
+            <button id="sendBtn" class="btn btn-success btn-large" disabled>Invia a n8n Webhook</button>
+
+            <div id="sendStatus" class="status-box" style="display: none;"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Applicazione per inviare PDF da Google Drive a webhook n8n</p>
+            <button id="resetApp" class="btn btn-danger btn-small">Reset Completo Applicazione</button>
+        </div>
+    </div>
+
+    <!-- Google API Script -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="app.js"></script>
+</body>
+</html>

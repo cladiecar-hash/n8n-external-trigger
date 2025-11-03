@@ -1,0 +1,209 @@
+{
+  "name": "Google Drive PDF Webhook Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google-drive-pdf",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "google-drive-pdf"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.pbsCode}}",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{$json.fileData}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "validate-data",
+      "name": "Validate Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Decodifica il file PDF da base64\nconst base64Data = $input.item.json.fileData;\nconst fileName = $input.item.json.fileName;\nconst pbsCode = $input.item.json.pbsCode;\n\n// Converti base64 in buffer\nconst buffer = Buffer.from(base64Data, 'base64');\n\n// Prepara i dati per il salvataggio\nreturn {\n  json: {\n    pbsCode: pbsCode,\n    fileName: fileName,\n    fileSize: $input.item.json.fileSize,\n    timestamp: $input.item.json.timestamp,\n    processedAt: new Date().toISOString()\n  },\n  binary: {\n    data: {\n      data: buffer.toString('base64'),\n      mimeType: 'application/pdf',\n      fileName: fileName,\n      fileExtension: 'pdf'\n    }\n  }\n};"
+      },
+      "id": "process-pdf",
+      "name": "Process PDF",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        650,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": "={{$json.pbsCode}}_{{$json.fileName}}",
+        "options": {}
+      },
+      "id": "save-file",
+      "name": "Save to Disk",
+      "type": "n8n-nodes-base.writeFile",
+      "typeVersion": 1,
+      "position": [
+        850,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "your-table-id",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "PBS Code",
+              "fieldValue": "={{$json.pbsCode}}"
+            },
+            {
+              "fieldId": "File Name",
+              "fieldValue": "={{$json.fileName}}"
+            },
+            {
+              "fieldId": "File Size",
+              "fieldValue": "={{$json.fileSize}}"
+            },
+            {
+              "fieldId": "Google Drive ID",
+              "fieldValue": "={{$json.fileId}}"
+            },
+            {
+              "fieldId": "Timestamp",
+              "fieldValue": "={{$json.timestamp}}"
+            }
+          ]
+        }
+      },
+      "id": "save-to-db",
+      "name": "Save to Database (Example)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 1,
+      "position": [
+        850,
+        400
+      ],
+      "disabled": true,
+      "notes": "Questo è un esempio - configura con il tuo database"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"File ricevuto e processato con successo\", \"pbsCode\": $json.pbsCode, \"fileName\": $json.fileName } }}"
+      },
+      "id": "response-success",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 400,
+        "responseBody": "={{ { \"success\": false, \"error\": \"Dati mancanti o non validi\" } }}"
+      },
+      "id": "response-error",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        650,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Data": {
+      "main": [
+        [
+          {
+            "node": "Process PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process PDF": {
+      "main": [
+        [
+          {
+            "node": "Save to Disk",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save to Database (Example)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Disk": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {},
+  "meta": {
+    "instanceId": "your-instance-id"
+  }
+}
