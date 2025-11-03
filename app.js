@@ -344,9 +344,9 @@ async function sendToWebhook() {
         return;
     }
 
-    // Validazione codice PBS (solo alfanumerico)
-    if (!/^[A-Za-z0-9]+$/.test(pbsCode)) {
-        alert('Il codice PBS deve contenere solo caratteri alfanumerici');
+    // Validazione codice PBS (alfanumerico, trattini e underscore)
+    if (!/^[A-Za-z0-9_-]+$/.test(pbsCode)) {
+        alert('Il codice PBS deve contenere solo lettere, numeri, trattini (-) e underscore (_)');
         return;
     }
 
@@ -460,7 +460,7 @@ function updateSendButton() {
     const pbsCode = document.getElementById('pbsCode').value.trim();
     const sendBtn = document.getElementById('sendBtn');
 
-    sendBtn.disabled = !(selectedFile && pbsCode && /^[A-Za-z0-9]+$/.test(pbsCode));
+    sendBtn.disabled = !(selectedFile && pbsCode && /^[A-Za-z0-9_-]+$/.test(pbsCode));
 }
 
 // ============= EVENT LISTENERS =============

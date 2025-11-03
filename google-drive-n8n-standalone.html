@@ -404,9 +404,9 @@
             <h2>Codice PBS e Invio</h2>
 
             <div class="form-group">
-                <label for="pbsCode">Codice PBS (alfanumerico):</label>
-                <input type="text" id="pbsCode" placeholder="Es: PBS12345ABC" pattern="[A-Za-z0-9]+" required>
-                <small>Solo caratteri alfanumerici (lettere e numeri)</small>
+                <label for="pbsCode">Codice PBS:</label>
+                <input type="text" id="pbsCode" placeholder="Es: PBS-12345_ABC" pattern="[A-Za-z0-9_-]+" required>
+                <small>Lettere, numeri, trattini (-) e underscore (_)</small>
             </div>
 
             <button id="sendBtn" class="btn btn-success btn-large" disabled>Invia a n8n Webhook</button>
@@ -762,8 +762,8 @@ async function sendToWebhook() {
         return;
     }
 
-    if (!/^[A-Za-z0-9]+$/.test(pbsCode)) {
-        alert('Il codice PBS deve contenere solo caratteri alfanumerici');
+    if (!/^[A-Za-z0-9_-]+$/.test(pbsCode)) {
+        alert('Il codice PBS deve contenere solo lettere, numeri, trattini (-) e underscore (_)');
         return;
     }
 
@@ -871,7 +871,7 @@ function updateSendButton() {
     const pbsCode = document.getElementById('pbsCode').value.trim();
     const sendBtn = document.getElementById('sendBtn');
 
-    sendBtn.disabled = !(selectedFile && pbsCode && /^[A-Za-z0-9]+$/.test(pbsCode));
+    sendBtn.disabled = !(selectedFile && pbsCode && /^[A-Za-z0-9_-]+$/.test(pbsCode));
 }
 
 // ============= EVENT LISTENERS =============
