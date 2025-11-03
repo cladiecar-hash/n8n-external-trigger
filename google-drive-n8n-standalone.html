@@ -773,10 +773,16 @@ async function sendToWebhook() {
     sendStatus.innerHTML = '<div class="loading">Invio al webhook n8n</div>';
 
     try {
-        // Prepara i dati da inviare (solo File ID e PBS Code)
+        // Prepara i dati da inviare (File ID, PBS Code e metadata utili)
         const payload = {
             fileId: selectedFile.id,
-            pbsCode: pbsCode
+            pbsCode: pbsCode,
+            fileName: selectedFile.name,
+            fileSize: selectedFile.size,
+            mimeType: 'application/pdf',
+            modifiedTime: selectedFile.modifiedTime,
+            webViewLink: selectedFile.webViewLink || '',
+            timestamp: new Date().toISOString()
         };
 
         const webhookResponse = await fetch(webhookUrl, {

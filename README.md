@@ -98,22 +98,28 @@ Applicazione web per inviare file PDF da Google Drive a un webhook n8n con codic
 
 ### Esempio di Workflow n8n
 
-Il webhook riceverà un payload JSON semplice con questi dati:
+Il webhook riceverà un payload JSON con metadati utili:
 
 ```json
 {
   "fileId": "1abc...xyz",
-  "pbsCode": "PBS-12345_ABC"
+  "pbsCode": "PBS-12345_ABC",
+  "fileName": "documento.pdf",
+  "fileSize": 1234567,
+  "mimeType": "application/pdf",
+  "modifiedTime": "2024-01-15T10:30:00.000Z",
+  "webViewLink": "https://drive.google.com/file/d/...",
+  "timestamp": "2024-01-15T10:35:00.000Z"
 }
 ```
 
-**Nota**: L'applicazione invia solo l'ID del file Google Drive e il codice PBS. Il tuo workflow n8n può poi utilizzare il `fileId` per scaricare il file direttamente da Google Drive quando necessario, utilizzando il nodo "Google Drive" di n8n.
+**Nota**: L'applicazione invia i metadati del file ma **NON il contenuto del PDF** (niente `fileData` in base64). Il tuo workflow n8n può utilizzare il `fileId` per scaricare il file direttamente da Google Drive quando necessario.
 
-Vantaggi di questo approccio:
-- ⚡ Invio molto più veloce (non scarica il file intero)
-- 💾 Meno dati da trasferire
-- 🔄 n8n può scaricare il file on-demand
-- 🔐 Maggiore sicurezza (file rimane su Google Drive)
+Vantaggi:
+- ⚡ Invio veloce (non trasferisce il file intero)
+- 📊 Metadata utili subito disponibili
+- 🔄 n8n scarica il file solo quando serve
+- 🔐 File rimane su Google Drive
 
 ## 💻 Installazione e Uso
 
@@ -261,7 +267,13 @@ Se ricevi errori CORS, assicurati che il webhook n8n accetti richieste dal tuo d
 ```json
 {
   "fileId": "string (ID del file su Google Drive)",
-  "pbsCode": "string (codice PBS con lettere, numeri, - e _)"
+  "pbsCode": "string (codice PBS con lettere, numeri, - e _)",
+  "fileName": "string (nome del file)",
+  "fileSize": "number (dimensione in bytes)",
+  "mimeType": "string (sempre 'application/pdf')",
+  "modifiedTime": "string (data ultima modifica ISO 8601)",
+  "webViewLink": "string (link Google Drive per visualizzare il file)",
+  "timestamp": "string (data/ora di invio ISO 8601)"
 }
 ```
 
@@ -269,11 +281,17 @@ Se ricevi errori CORS, assicurati che il webhook n8n accetti richieste dal tuo d
 ```json
 {
   "fileId": "1a2b3c4d5e6f7g8h9i0j",
-  "pbsCode": "PBS-12345_TEST"
+  "pbsCode": "PBS-12345_TEST",
+  "fileName": "fattura_gennaio.pdf",
+  "fileSize": 245678,
+  "mimeType": "application/pdf",
+  "modifiedTime": "2024-01-15T10:30:00.000Z",
+  "webViewLink": "https://drive.google.com/file/d/1a2b3c4d5e6f7g8h9i0j/view",
+  "timestamp": "2024-01-15T14:22:33.123Z"
 }
 ```
 
-Il workflow n8n può utilizzare il `fileId` per scaricare il file da Google Drive usando il nodo "Google Drive" con l'operazione "Download File".
+**IMPORTANTE**: Il payload **NON include** il contenuto del file (`fileData` in base64). Il workflow n8n usa il `fileId` per scaricare il file da Google Drive con il nodo "Google Drive" → operazione "Download File".
 
 ## 🎨 Personalizzazione
 
