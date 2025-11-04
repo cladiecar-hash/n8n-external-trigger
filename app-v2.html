@@ -513,6 +513,40 @@
                 </div>
             </div>
 
+            <!-- Folder Navigation -->
+            <div class="card" id="folderCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span class="icon">📂</span>
+                        Browse Folders
+                    </h2>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" class="form-input" id="folderSearch" placeholder="Search for folders...">
+                    <button class="btn btn-primary" onclick="searchFolders()">
+                        <span>🔍</span>
+                        Search Folders
+                    </button>
+                </div>
+
+                <div class="file-list" id="folderList" style="max-height: 300px;">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📂</div>
+                        <div class="empty-state-title">Search for folders</div>
+                        <div>Enter a folder name above or leave blank to see all folders</div>
+                    </div>
+                </div>
+
+                <div id="currentFolderBreadcrumb" style="display: none; margin-top: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.875rem;">Current folder:</span>
+                    <span id="currentFolderName" style="font-weight: 600; color: var(--primary);"></span>
+                    <button class="btn btn-outline btn-icon" onclick="clearFolder()" title="Clear folder filter" style="margin-left: auto;">
+                        <span>✕</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- File Selection -->
             <div class="card" id="fileCard" style="display: none;">
                 <div class="card-header">
@@ -523,10 +557,10 @@
                 </div>
 
                 <div class="search-box">
-                    <input type="text" class="form-input" id="fileSearch" placeholder="Search for files...">
+                    <input type="text" class="form-input" id="fileSearch" placeholder="Search for PDF files...">
                     <button class="btn btn-primary" onclick="searchFiles()">
                         <span>🔍</span>
-                        Search
+                        Search Files
                     </button>
                 </div>
 
@@ -660,6 +694,8 @@
             gisInited: false,
             tokenClient: null,
             selectedFile: null,
+            currentFolderId: null,
+            currentFolderName: null,
             connected: false
         };
 
@@ -806,10 +842,12 @@
 
             if (!configured || !connected) {
                 document.getElementById('connectionCard').style.display = 'block';
+                document.getElementById('folderCard').style.display = 'none';
                 document.getElementById('fileCard').style.display = 'none';
                 document.getElementById('sendCard').style.display = 'none';
             } else {
                 document.getElementById('connectionCard').style.display = 'none';
+                document.getElementById('folderCard').style.display = 'block';
                 document.getElementById('fileCard').style.display = 'block';
                 document.getElementById('sendCard').style.display = 'block';
                 updateConnectionStatus();
@@ -842,6 +880,83 @@
             }
         }
 
+        // Folder Operations
+        async function searchFolders() {
+            const searchTerm = document.getElementById('folderSearch').value.trim();
+            const folderList = document.getElementById('folderList');
+
+            folderList.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading folders...</span></div>';
+
+            try {
+                let query = "mimeType='application/vnd.google-apps.folder' and trashed=false";
+                if (searchTerm) {
+                    query += ` and name contains '${searchTerm}'`;
+                }
+
+                const response = await gapi.client.drive.files.list({
+                    q: query,
+                    pageSize: 20,
+                    fields: 'files(id, name, modifiedTime)',
+                    orderBy: 'name'
+                });
+
+                const folders = response.result.files;
+
+                if (!folders || folders.length === 0) {
+                    folderList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📂</div>
+                            <div class="empty-state-title">No folders found</div>
+                            <div>Try a different search term</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                folderList.innerHTML = folders.map(folder => `
+                    <div class="file-item" onclick='selectFolder("${folder.id}", "${folder.name.replace(/'/g, "\\'")}");'>
+                        <span class="file-icon">📂</span>
+                        <div class="file-info">
+                            <div class="file-name">${folder.name}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading folders:', error);
+                folderList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-title">Error loading folders</div>
+                        <div>Please check your connection and try again</div>
+                    </div>
+                `;
+            }
+        }
+
+        function selectFolder(folderId, folderName) {
+            APP.currentFolderId = folderId;
+            APP.currentFolderName = folderName;
+
+            // Show breadcrumb
+            document.getElementById('currentFolderBreadcrumb').style.display = 'flex';
+            document.getElementById('currentFolderName').textContent = folderName;
+
+            // Load files from this folder
+            searchFiles();
+        }
+
+        function clearFolder() {
+            APP.currentFolderId = null;
+            APP.currentFolderName = null;
+
+            // Hide breadcrumb
+            document.getElementById('currentFolderBreadcrumb').style.display = 'none';
+
+            // Reload all files
+            searchFiles();
+        }
+
         // File Operations
         async function loadFiles() {
             await searchFiles();
@@ -855,6 +970,13 @@
 
             try {
                 let query = "mimeType='application/pdf' and trashed=false";
+
+                // Filter by folder if selected
+                if (APP.currentFolderId) {
+                    query += ` and '${APP.currentFolderId}' in parents`;
+                }
+
+                // Filter by search term
                 if (searchTerm) {
                     query += ` and name contains '${searchTerm}'`;
                 }
@@ -1046,6 +1168,9 @@
         // Event Listeners
         function attachEventListeners() {
             document.getElementById('pbsCode').addEventListener('input', updateSendButton);
+            document.getElementById('folderSearch').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchFolders();
+            });
             document.getElementById('fileSearch').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchFiles();
             });
