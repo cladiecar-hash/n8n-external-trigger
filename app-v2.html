@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Drive PDF Sender</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --success: #10b981;
+            --success-dark: #059669;
+            --danger: #ef4444;
+            --danger-dark: #dc2626;
+            --warning: #f59e0b;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --text-light: #9ca3af;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-tertiary: #f3f4f6;
+            --border: #e5e7eb;
+            --border-light: #f3f4f6;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+        }
+
+        .card {
+            background: var(--bg-primary);
+            border-radius: 1rem;
+            box-shadow: var(--shadow-xl);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .icon {
+            font-size: 1.5rem;
+        }
+
+        .status-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .status-badge.connected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.disconnected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 9999px;
+            background: currentColor;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: var(--success-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-outline {
+            background: white;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: var(--bg-secondary);
+            border-color: var(--text-light);
+        }
+
+        .btn-lg {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        .btn-icon {
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9375rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 0.9375rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-hint {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--text-light);
+            margin-top: 0.375rem;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .search-box .form-input {
+            flex: 1;
+        }
+
+        .file-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            background: var(--bg-secondary);
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-light);
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .file-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item.selected {
+            background: #eef2ff;
+            border-left: 4px solid var(--primary);
+        }
+
+        .file-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-meta {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .selected-file-card {
+            background: #d1fae5;
+            border: 2px solid var(--success);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .selected-file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .selected-file-label {
+            font-size: 0.875rem;
+            color: #065f46;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .selected-file-name {
+            font-weight: 600;
+            color: #065f46;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .settings-link {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: white;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-lg);
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 100;
+        }
+
+        .settings-link:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem 0.75rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+            }
+
+            .title {
+                font-size: 1.5rem;
+            }
+
+            .settings-link {
+                top: 1rem;
+                right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main Page -->
+        <div id="mainPage" class="page active">
+            <div class="settings-link" onclick="showSettings()" title="Settings">
+                <span style="font-size: 1.5rem;">⚙️</span>
+            </div>
+
+            <div class="header">
+                <div class="logo">📄</div>
+                <h1 class="title">Google Drive PDF Sender</h1>
+                <p class="subtitle">Send PDF files from Google Drive to n8n webhook</p>
+            </div>
+
+            <!-- Connection Status -->
+            <div class="card" id="connectionCard">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span class="icon">🔗</span>
+                        Connection Status
+                    </h2>
+                    <span class="status-badge disconnected" id="statusBadge">
+                        <span class="status-dot"></span>
+                        Disconnected
+                    </span>
+                </div>
+                <div id="connectionContent">
+                    <div class="alert alert-info">
+                        <span class="alert-icon">ℹ️</span>
+                        <div class="alert-content">
+                            <div class="alert-title">Setup Required</div>
+                            <div>Please configure your credentials and connect to Google Drive in Settings.</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-lg" onclick="showSettings()">
+                        <span>⚙️</span>
+                        Go to Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- File Selection -->
+            <div class="card" id="fileCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span class="icon">📁</span>
+                        Select PDF File
+                    </h2>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" class="form-input" id="fileSearch" placeholder="Search for files...">
+                    <button class="btn btn-primary" onclick="searchFiles()">
+                        <span>🔍</span>
+                        Search
+                    </button>
+                </div>
+
+                <div class="file-list" id="fileList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>Loading files...</span>
+                    </div>
+                </div>
+
+                <div id="selectedFileCard" style="display: none;" class="selected-file-card">
+                    <div class="selected-file-info">
+                        <div class="selected-file-label">Selected File:</div>
+                        <div class="selected-file-name" id="selectedFileName"></div>
+                    </div>
+                    <button class="btn btn-outline btn-icon" onclick="clearSelection()" title="Clear selection">
+                        <span>✕</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PBS Code & Send -->
+            <div class="card" id="sendCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span class="icon">🏷️</span>
+                        PBS Code & Send
+                    </h2>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="pbsCode">PBS Code</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        id="pbsCode"
+                        placeholder="e.g., PBS-12345_TEST"
+                        pattern="[A-Za-z0-9_-]+"
+                    >
+                    <span class="form-hint">Letters, numbers, hyphens (-) and underscores (_) only</span>
+                </div>
+
+                <button class="btn btn-success btn-lg" id="sendBtn" onclick="sendToWebhook()" disabled>
+                    <span>📤</span>
+                    Send to n8n Webhook
+                </button>
+
+                <div id="sendStatus" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="settingsPage" class="page">
+            <a href="#" class="back-button" onclick="showMain(); return false;">
+                <span>←</span>
+                Back to Main
+            </a>
+
+            <div class="header">
+                <div class="logo">⚙️</div>
+                <h1 class="title">Settings</h1>
+                <p class="subtitle">Configure Google Drive API and n8n webhook</p>
+            </div>
+
+            <!-- API Configuration -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span class="icon">🔑</span>
+                        API Configuration
+                    </h2>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="clientId">Google Client ID</label>
+                    <input type="text" class="form-input" id="clientId" placeholder="xxxxx.apps.googleusercontent.com">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="apiKey">Google API Key</label>
+                    <input type="text" class="form-input" id="apiKey" placeholder="Your Google API Key">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="webhookUrl">n8n Webhook URL</label>
+                    <input type="url" class="form-input" id="webhookUrl" placeholder="https://your-n8n.com/webhook/...">
+                    <span class="form-hint">The webhook endpoint where PDFs will be sent</span>
+                </div>
+
+                <button class="btn btn-primary btn-lg" id="saveConfigBtn" onclick="saveConfig()">
+                    <span>💾</span>
+                    Save Configuration
+                </button>
+            </div>
+
+            <!-- Google Drive Connection -->
+            <div class="card" id="driveConnectionCard">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span class="icon">🔗</span>
+                        Google Drive Connection
+                    </h2>
+                    <span class="status-badge disconnected" id="settingsStatusBadge">
+                        <span class="status-dot"></span>
+                        Disconnected
+                    </span>
+                </div>
+
+                <div id="driveConnectionContent">
+                    <div class="alert alert-info">
+                        <span class="alert-icon">ℹ️</span>
+                        <div class="alert-content">
+                            Please save your API configuration first, then connect to Google Drive.
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-lg" id="connectBtn" onclick="connectToDrive()" disabled>
+                        <span>🔗</span>
+                        Connect to Google Drive
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script>
+        // App state
+        const APP = {
+            gapiInited: false,
+            gisInited: false,
+            tokenClient: null,
+            selectedFile: null,
+            connected: false
+        };
+
+        const CONFIG = {
+            DISCOVERY_DOCS: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+            SCOPES: 'https://www.googleapis.com/auth/drive.readonly'
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConfig();
+            attachEventListeners();
+            gapiLoaded();
+            gisLoaded();
+            updateUI();
+        });
+
+        // Navigation
+        function showSettings() {
+            document.getElementById('mainPage').classList.remove('active');
+            document.getElementById('settingsPage').classList.add('active');
+            updateSettingsUI();
+        }
+
+        function showMain() {
+            document.getElementById('settingsPage').classList.remove('active');
+            document.getElementById('mainPage').classList.add('active');
+            updateUI();
+        }
+
+        // Configuration
+        function loadConfig() {
+            const clientId = localStorage.getItem('google_client_id');
+            const apiKey = localStorage.getItem('google_api_key');
+            const webhookUrl = localStorage.getItem('webhook_url');
+
+            if (clientId) document.getElementById('clientId').value = clientId;
+            if (apiKey) document.getElementById('apiKey').value = apiKey;
+            if (webhookUrl) document.getElementById('webhookUrl').value = webhookUrl;
+
+            return !!(clientId && apiKey && webhookUrl);
+        }
+
+        function saveConfig() {
+            const clientId = document.getElementById('clientId').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const webhookUrl = document.getElementById('webhookUrl').value.trim();
+
+            if (!clientId || !apiKey || !webhookUrl) {
+                showAlert('error', 'Please fill in all fields', 'driveConnectionContent');
+                return;
+            }
+
+            try {
+                new URL(webhookUrl);
+            } catch {
+                showAlert('error', 'Invalid webhook URL', 'driveConnectionContent');
+                return;
+            }
+
+            localStorage.setItem('google_client_id', clientId);
+            localStorage.setItem('google_api_key', apiKey);
+            localStorage.setItem('webhook_url', webhookUrl);
+
+            showAlert('success', 'Configuration saved successfully!', 'driveConnectionContent');
+
+            // Reinitialize APIs
+            APP.gapiInited = false;
+            APP.gisInited = false;
+            gapiLoaded();
+            gisLoaded();
+
+            setTimeout(() => {
+                document.getElementById('connectBtn').disabled = false;
+            }, 500);
+        }
+
+        // Google API Initialization
+        function gapiLoaded() {
+            const apiKey = localStorage.getItem('google_api_key');
+            if (!apiKey) return;
+
+            gapi.load('client', async () => {
+                await gapi.client.init({
+                    apiKey: apiKey,
+                    discoveryDocs: CONFIG.DISCOVERY_DOCS,
+                });
+                APP.gapiInited = true;
+                checkReady();
+            });
+        }
+
+        function gisLoaded() {
+            const clientId = localStorage.getItem('google_client_id');
+            if (!clientId) return;
+
+            APP.tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: clientId,
+                scope: CONFIG.SCOPES,
+                callback: (response) => {
+                    if (response.error !== undefined) {
+                        showAlert('error', 'Authentication failed: ' + response.error, 'driveConnectionContent');
+                        return;
+                    }
+                    handleAuthSuccess();
+                },
+            });
+            APP.gisInited = true;
+            checkReady();
+        }
+
+        function checkReady() {
+            if (APP.gapiInited && APP.gisInited) {
+                document.getElementById('connectBtn').disabled = false;
+            }
+        }
+
+        // Authentication
+        function connectToDrive() {
+            if (gapi.client.getToken() === null) {
+                APP.tokenClient.requestAccessToken({ prompt: 'consent' });
+            } else {
+                APP.tokenClient.requestAccessToken({ prompt: '' });
+            }
+        }
+
+        function handleAuthSuccess() {
+            APP.connected = true;
+            updateConnectionStatus();
+            updateSettingsUI();
+            showAlert('success', 'Successfully connected to Google Drive!', 'driveConnectionContent');
+
+            // Load files automatically
+            setTimeout(() => {
+                showMain();
+                loadFiles();
+            }, 1000);
+        }
+
+        // UI Updates
+        function updateUI() {
+            const configured = loadConfig();
+            const connected = APP.connected && gapi.client.getToken() !== null;
+
+            if (!configured || !connected) {
+                document.getElementById('connectionCard').style.display = 'block';
+                document.getElementById('fileCard').style.display = 'none';
+                document.getElementById('sendCard').style.display = 'none';
+            } else {
+                document.getElementById('connectionCard').style.display = 'none';
+                document.getElementById('fileCard').style.display = 'block';
+                document.getElementById('sendCard').style.display = 'block';
+                updateConnectionStatus();
+            }
+        }
+
+        function updateSettingsUI() {
+            const connected = APP.connected && gapi.client.getToken() !== null;
+            const badge = document.getElementById('settingsStatusBadge');
+
+            if (connected) {
+                badge.className = 'status-badge connected';
+                badge.innerHTML = '<span class="status-dot"></span>Connected';
+            } else {
+                badge.className = 'status-badge disconnected';
+                badge.innerHTML = '<span class="status-dot"></span>Disconnected';
+            }
+        }
+
+        function updateConnectionStatus() {
+            const connected = APP.connected && gapi.client.getToken() !== null;
+            const badge = document.getElementById('statusBadge');
+
+            if (connected) {
+                badge.className = 'status-badge connected';
+                badge.innerHTML = '<span class="status-dot"></span>Connected';
+            } else {
+                badge.className = 'status-badge disconnected';
+                badge.innerHTML = '<span class="status-dot"></span>Disconnected';
+            }
+        }
+
+        // File Operations
+        async function loadFiles() {
+            await searchFiles();
+        }
+
+        async function searchFiles() {
+            const searchTerm = document.getElementById('fileSearch').value.trim();
+            const fileList = document.getElementById('fileList');
+
+            fileList.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading files...</span></div>';
+
+            try {
+                let query = "mimeType='application/pdf' and trashed=false";
+                if (searchTerm) {
+                    query += ` and name contains '${searchTerm}'`;
+                }
+
+                const response = await gapi.client.drive.files.list({
+                    q: query,
+                    pageSize: 30,
+                    fields: 'files(id, name, size, modifiedTime, webViewLink)',
+                    orderBy: 'modifiedTime desc'
+                });
+
+                const files = response.result.files;
+
+                if (!files || files.length === 0) {
+                    fileList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📄</div>
+                            <div class="empty-state-title">No PDF files found</div>
+                            <div>Try a different search term or upload PDFs to your Google Drive</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                fileList.innerHTML = files.map(file => {
+                    const size = formatFileSize(file.size);
+                    const date = new Date(file.modifiedTime).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+
+                    return `
+                        <div class="file-item" onclick='selectFile(${JSON.stringify(file)})'>
+                            <span class="file-icon">📄</span>
+                            <div class="file-info">
+                                <div class="file-name">${file.name}</div>
+                                <div class="file-meta">${size} • Modified ${date}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error loading files:', error);
+                fileList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-title">Error loading files</div>
+                        <div>Please check your connection and try again</div>
+                    </div>
+                `;
+            }
+        }
+
+        function selectFile(file) {
+            APP.selectedFile = file;
+
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+
+            document.getElementById('selectedFileCard').style.display = 'flex';
+            document.getElementById('selectedFileName').textContent = file.name;
+
+            updateSendButton();
+        }
+
+        function clearSelection() {
+            APP.selectedFile = null;
+            document.getElementById('selectedFileCard').style.display = 'none';
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            updateSendButton();
+        }
+
+        // Send to Webhook
+        async function sendToWebhook() {
+            const pbsCode = document.getElementById('pbsCode').value.trim();
+            const webhookUrl = localStorage.getItem('webhook_url');
+            const statusDiv = document.getElementById('sendStatus');
+
+            if (!APP.selectedFile) {
+                showAlert('error', 'Please select a PDF file first', 'sendStatus');
+                return;
+            }
+
+            if (!pbsCode) {
+                showAlert('error', 'Please enter a PBS code', 'sendStatus');
+                return;
+            }
+
+            if (!/^[A-Za-z0-9_-]+$/.test(pbsCode)) {
+                showAlert('error', 'PBS code can only contain letters, numbers, hyphens and underscores', 'sendStatus');
+                return;
+            }
+
+            document.getElementById('sendBtn').disabled = true;
+            statusDiv.innerHTML = '<div class="loading"><div class="spinner"></div><span>Sending to webhook...</span></div>';
+            statusDiv.style.display = 'block';
+
+            try {
+                const payload = {
+                    fileId: APP.selectedFile.id,
+                    pbsCode: pbsCode,
+                    fileName: APP.selectedFile.name,
+                    fileSize: APP.selectedFile.size,
+                    mimeType: 'application/pdf',
+                    modifiedTime: APP.selectedFile.modifiedTime,
+                    webViewLink: APP.selectedFile.webViewLink || '',
+                    timestamp: new Date().toISOString()
+                };
+
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json().catch(() => ({}));
+
+                statusDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <span class="alert-icon">✅</span>
+                        <div class="alert-content">
+                            <div class="alert-title">Successfully Sent!</div>
+                            <div>File: ${APP.selectedFile.name}</div>
+                            <div>PBS Code: ${pbsCode}</div>
+                            ${result.message ? `<div>Response: ${result.message}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('pbsCode').value = '';
+                clearSelection();
+
+            } catch (error) {
+                console.error('Error sending to webhook:', error);
+                statusDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <span class="alert-icon">❌</span>
+                        <div class="alert-content">
+                            <div class="alert-title">Send Failed</div>
+                            <div>${error.message}</div>
+                        </div>
+                    </div>
+                `;
+            } finally {
+                document.getElementById('sendBtn').disabled = false;
+            }
+        }
+
+        // Utilities
+        function formatFileSize(bytes) {
+            if (!bytes) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function showAlert(type, message, containerId) {
+            const container = document.getElementById(containerId);
+            const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+
+            container.innerHTML = `
+                <div class="alert alert-${type}">
+                    <span class="alert-icon">${icons[type]}</span>
+                    <div class="alert-content">${message}</div>
+                </div>
+            `;
+            container.style.display = 'block';
+        }
+
+        function updateSendButton() {
+            const pbsCode = document.getElementById('pbsCode').value.trim();
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = !(APP.selectedFile && pbsCode && /^[A-Za-z0-9_-]+$/.test(pbsCode));
+        }
+
+        // Event Listeners
+        function attachEventListeners() {
+            document.getElementById('pbsCode').addEventListener('input', updateSendButton);
+            document.getElementById('fileSearch').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchFiles();
+            });
+        }
+    </script>
+</body>
+</html>
