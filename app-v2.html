@@ -669,6 +669,8 @@
                     </span>
                 </div>
 
+                <div id="driveConnectionAlert" style="margin-bottom: 1rem;"></div>
+
                 <div id="driveConnectionContent">
                     <div class="alert alert-info">
                         <span class="alert-icon">ℹ️</span>
@@ -745,14 +747,14 @@
             const webhookUrl = document.getElementById('webhookUrl').value.trim();
 
             if (!clientId || !apiKey || !webhookUrl) {
-                showAlert('error', 'Please fill in all fields', 'driveConnectionContent');
+                showAlert('error', 'Please fill in all fields', 'driveConnectionAlert');
                 return;
             }
 
             try {
                 new URL(webhookUrl);
             } catch {
-                showAlert('error', 'Invalid webhook URL', 'driveConnectionContent');
+                showAlert('error', 'Invalid webhook URL', 'driveConnectionAlert');
                 return;
             }
 
@@ -760,7 +762,12 @@
             localStorage.setItem('google_api_key', apiKey);
             localStorage.setItem('webhook_url', webhookUrl);
 
-            showAlert('success', 'Configuration saved successfully!', 'driveConnectionContent');
+            showAlert('success', 'Configuration saved successfully!', 'driveConnectionAlert');
+
+            // Auto-dismiss success message after 3 seconds
+            setTimeout(() => {
+                document.getElementById('driveConnectionAlert').innerHTML = '';
+            }, 3000);
 
             // Reinitialize APIs
             APP.gapiInited = false;
@@ -826,7 +833,12 @@
             APP.connected = true;
             updateConnectionStatus();
             updateSettingsUI();
-            showAlert('success', 'Successfully connected to Google Drive!', 'driveConnectionContent');
+            showAlert('success', 'Successfully connected to Google Drive!', 'driveConnectionAlert');
+
+            // Auto-dismiss success message after 2 seconds
+            setTimeout(() => {
+                document.getElementById('driveConnectionAlert').innerHTML = '';
+            }, 2000);
 
             // Load files automatically
             setTimeout(() => {
