@@ -610,6 +610,86 @@
 
                 <div id="sendStatus" style="display: none;"></div>
             </div>
+
+            <!-- Job Results -->
+            <div class="card" id="resultsCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span class="icon">📊</span>
+                        Processing Results
+                    </h2>
+                    <span class="status-badge" id="jobStatusBadge" style="display: none;">
+                        <span class="status-dot"></span>
+                        <span id="jobStatusText">Processing</span>
+                    </span>
+                </div>
+
+                <div id="jobInfo" style="display: none; margin-bottom: 1rem;">
+                    <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 0.5rem;">
+                        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Job ID:</div>
+                        <div style="font-family: monospace; font-weight: 600; color: var(--text-primary);" id="jobIdDisplay"></div>
+                    </div>
+                </div>
+
+                <div id="manualInputSection" style="display: none; margin-bottom: 1rem;">
+                    <div class="alert alert-info">
+                        <span class="alert-icon">ℹ️</span>
+                        <div class="alert-content">
+                            No callback URL configured. You can paste the JSON result here manually when n8n completes processing.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="manualJsonInput">Paste JSON Result</label>
+                        <textarea
+                            class="form-input"
+                            id="manualJsonInput"
+                            rows="6"
+                            placeholder='{"jobId":"...","status":"ready","url":"...",...}'
+                            style="font-family: monospace; font-size: 0.875rem;"
+                        ></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="loadManualResult()">
+                        <span>📥</span>
+                        Load Result
+                    </button>
+                </div>
+
+                <div id="jsonResultSection" style="display: none;">
+                    <div class="alert alert-success">
+                        <span class="alert-icon">✅</span>
+                        <div class="alert-content">
+                            <div class="alert-title">Processing Complete!</div>
+                            <div id="resultSummary"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">JSON Data</label>
+                        <textarea
+                            class="form-input"
+                            id="jsonDataView"
+                            rows="15"
+                            style="font-family: monospace; font-size: 0.875rem;"
+                        ></textarea>
+                        <span class="form-hint">Edit and validate the extracted data</span>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="downloadJson()">
+                            <span>⬇️</span>
+                            Download JSON
+                        </button>
+                        <button class="btn btn-success" onclick="validateAndSave()">
+                            <span>✅</span>
+                            Validate & Save
+                        </button>
+                        <button class="btn btn-outline" onclick="clearResults()">
+                            <span>✕</span>
+                            Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Settings Page -->
@@ -645,9 +725,21 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="webhookUrl">n8n Webhook URL</label>
-                    <input type="url" class="form-input" id="webhookUrl" placeholder="https://your-n8n.com/webhook/...">
-                    <span class="form-hint">The webhook endpoint where PDFs will be sent</span>
+                    <label class="form-label" for="webhookUrl">n8n Webhook URL (Ingest)</label>
+                    <input type="url" class="form-input" id="webhookUrl" placeholder="https://your-n8n.com/webhook/ingest">
+                    <span class="form-hint">The webhook endpoint where PDFs will be sent for processing</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="callbackUrl">Callback URL (Optional)</label>
+                    <input type="url" class="form-input" id="callbackUrl" placeholder="https://your-app.com/api/callback">
+                    <span class="form-hint">URL where n8n will send the processed JSON results. Leave empty to paste results manually.</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="callbackToken">Callback Token (Optional)</label>
+                    <input type="text" class="form-input" id="callbackToken" placeholder="your-secret-token">
+                    <span class="form-hint">Bearer token for authenticating callback requests</span>
                 </div>
 
                 <button class="btn btn-primary btn-lg" id="saveConfigBtn" onclick="saveConfig()">
@@ -733,10 +825,14 @@
             const clientId = localStorage.getItem('google_client_id');
             const apiKey = localStorage.getItem('google_api_key');
             const webhookUrl = localStorage.getItem('webhook_url');
+            const callbackUrl = localStorage.getItem('callback_url');
+            const callbackToken = localStorage.getItem('callback_token');
 
             if (clientId) document.getElementById('clientId').value = clientId;
             if (apiKey) document.getElementById('apiKey').value = apiKey;
             if (webhookUrl) document.getElementById('webhookUrl').value = webhookUrl;
+            if (callbackUrl) document.getElementById('callbackUrl').value = callbackUrl;
+            if (callbackToken) document.getElementById('callbackToken').value = callbackToken;
 
             return !!(clientId && apiKey && webhookUrl);
         }
@@ -745,9 +841,11 @@
             const clientId = document.getElementById('clientId').value.trim();
             const apiKey = document.getElementById('apiKey').value.trim();
             const webhookUrl = document.getElementById('webhookUrl').value.trim();
+            const callbackUrl = document.getElementById('callbackUrl').value.trim();
+            const callbackToken = document.getElementById('callbackToken').value.trim();
 
             if (!clientId || !apiKey || !webhookUrl) {
-                showAlert('error', 'Please fill in all fields', 'driveConnectionAlert');
+                showAlert('error', 'Please fill in required fields (Client ID, API Key, Webhook URL)', 'driveConnectionAlert');
                 return;
             }
 
@@ -758,9 +856,21 @@
                 return;
             }
 
+            // Validate callback URL if provided
+            if (callbackUrl) {
+                try {
+                    new URL(callbackUrl);
+                } catch {
+                    showAlert('error', 'Invalid callback URL', 'driveConnectionAlert');
+                    return;
+                }
+            }
+
             localStorage.setItem('google_client_id', clientId);
             localStorage.setItem('google_api_key', apiKey);
             localStorage.setItem('webhook_url', webhookUrl);
+            localStorage.setItem('callback_url', callbackUrl);
+            localStorage.setItem('callback_token', callbackToken);
 
             showAlert('success', 'Configuration saved successfully!', 'driveConnectionAlert');
 
@@ -1093,6 +1203,9 @@
             statusDiv.style.display = 'block';
 
             try {
+                const callbackUrl = localStorage.getItem('callback_url');
+                const callbackToken = localStorage.getItem('callback_token');
+
                 const payload = {
                     fileId: APP.selectedFile.id,
                     pbsCode: pbsCode,
@@ -1103,6 +1216,14 @@
                     webViewLink: APP.selectedFile.webViewLink || '',
                     timestamp: new Date().toISOString()
                 };
+
+                // Add callback URL and token if configured
+                if (callbackUrl) {
+                    payload.callbackUrl = callbackUrl;
+                }
+                if (callbackToken) {
+                    payload.callbackToken = callbackToken;
+                }
 
                 const response = await fetch(webhookUrl, {
                     method: 'POST',
@@ -1118,17 +1239,37 @@
 
                 const result = await response.json().catch(() => ({}));
 
-                statusDiv.innerHTML = `
-                    <div class="alert alert-success">
-                        <span class="alert-icon">✅</span>
-                        <div class="alert-content">
-                            <div class="alert-title">Successfully Sent!</div>
-                            <div>File: ${APP.selectedFile.name}</div>
-                            <div>PBS Code: ${pbsCode}</div>
-                            ${result.message ? `<div>Response: ${result.message}</div>` : ''}
+                // Check if this is a 202 Accepted (async processing)
+                if (response.status === 202 || result.jobId) {
+                    // Show processing status
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <span class="alert-icon">✅</span>
+                            <div class="alert-content">
+                                <div class="alert-title">Job Submitted Successfully!</div>
+                                <div>File: ${APP.selectedFile.name}</div>
+                                <div>PBS Code: ${pbsCode}</div>
+                                <div>Job ID: ${result.jobId || 'N/A'}</div>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+
+                    // Show results card with processing status
+                    showJobProcessing(result.jobId, callbackUrl);
+                } else {
+                    // Immediate response (200 OK)
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <span class="alert-icon">✅</span>
+                            <div class="alert-content">
+                                <div class="alert-title">Successfully Sent!</div>
+                                <div>File: ${APP.selectedFile.name}</div>
+                                <div>PBS Code: ${pbsCode}</div>
+                                ${result.message ? `<div>Response: ${result.message}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
 
                 document.getElementById('pbsCode').value = '';
                 clearSelection();
@@ -1175,6 +1316,169 @@
             const pbsCode = document.getElementById('pbsCode').value.trim();
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = !(APP.selectedFile && pbsCode && /^[A-Za-z0-9_-]+$/.test(pbsCode));
+        }
+
+        // Job Processing & Results
+        function showJobProcessing(jobId, callbackUrl) {
+            const resultsCard = document.getElementById('resultsCard');
+            const jobStatusBadge = document.getElementById('jobStatusBadge');
+            const jobStatusText = document.getElementById('jobStatusText');
+            const jobInfo = document.getElementById('jobInfo');
+            const jobIdDisplay = document.getElementById('jobIdDisplay');
+            const manualInputSection = document.getElementById('manualInputSection');
+
+            // Show results card
+            resultsCard.style.display = 'block';
+
+            // Show processing status
+            jobStatusBadge.style.display = 'inline-flex';
+            jobStatusBadge.className = 'status-badge';
+            jobStatusBadge.style.background = '#fff3cd';
+            jobStatusBadge.style.color = '#856404';
+            jobStatusText.textContent = 'Processing';
+
+            // Show job ID
+            jobInfo.style.display = 'block';
+            jobIdDisplay.textContent = jobId || 'N/A';
+
+            // Show manual input if no callback URL
+            if (!callbackUrl) {
+                manualInputSection.style.display = 'block';
+            }
+
+            // Scroll to results
+            resultsCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        async function loadManualResult() {
+            const input = document.getElementById('manualJsonInput').value.trim();
+
+            if (!input) {
+                alert('Please paste the JSON result from n8n');
+                return;
+            }
+
+            try {
+                const result = JSON.parse(input);
+                await displayResult(result);
+                document.getElementById('manualJsonInput').value = '';
+            } catch (error) {
+                alert('Invalid JSON format: ' + error.message);
+            }
+        }
+
+        async function displayResult(result) {
+            const jobStatusBadge = document.getElementById('jobStatusBadge');
+            const jobStatusText = document.getElementById('jobStatusText');
+            const manualInputSection = document.getElementById('manualInputSection');
+            const jsonResultSection = document.getElementById('jsonResultSection');
+            const resultSummary = document.getElementById('resultSummary');
+            const jsonDataView = document.getElementById('jsonDataView');
+
+            // Update status to ready
+            jobStatusBadge.className = 'status-badge connected';
+            jobStatusText.textContent = 'Ready';
+
+            // Hide manual input
+            manualInputSection.style.display = 'none';
+
+            // Fetch JSON from public URL
+            let jsonData;
+            if (result.url) {
+                try {
+                    const response = await fetch(result.url);
+                    jsonData = await response.json();
+                } catch (error) {
+                    console.error('Error fetching JSON:', error);
+                    alert('Failed to fetch JSON from URL. Please check the URL and try again.');
+                    return;
+                }
+            } else if (result.data) {
+                jsonData = result.data;
+            } else {
+                alert('Result does not contain URL or data');
+                return;
+            }
+
+            // Show summary
+            resultSummary.innerHTML = `
+                <div>File: ${result.fileName || 'N/A'}</div>
+                ${result.items ? `<div>Items found: ${result.items}</div>` : ''}
+                ${result.durationSec ? `<div>Processing time: ${result.durationSec}s</div>` : ''}
+            `;
+
+            // Show JSON in editor
+            jsonDataView.value = JSON.stringify(jsonData, null, 2);
+
+            // Show results section
+            jsonResultSection.style.display = 'block';
+        }
+
+        function downloadJson() {
+            const jsonText = document.getElementById('jsonDataView').value;
+
+            if (!jsonText) {
+                alert('No JSON data to download');
+                return;
+            }
+
+            try {
+                // Validate JSON
+                JSON.parse(jsonText);
+
+                // Create download
+                const blob = new Blob([jsonText], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `processed_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                alert('Invalid JSON format: ' + error.message);
+            }
+        }
+
+        function validateAndSave() {
+            const jsonText = document.getElementById('jsonDataView').value;
+
+            if (!jsonText) {
+                alert('No JSON data to validate');
+                return;
+            }
+
+            try {
+                const jsonData = JSON.parse(jsonText);
+
+                // Basic validation
+                if (!Array.isArray(jsonData) && typeof jsonData !== 'object') {
+                    alert('JSON must be an object or array');
+                    return;
+                }
+
+                // TODO: Add your custom validation logic here
+                // For example, check required fields, data types, etc.
+
+                alert('✅ JSON is valid!\n\nYou can now:\n1. Download the JSON\n2. Send it to another endpoint\n3. Use it in your workflow');
+
+                // TODO: Implement save logic (e.g., send to another webhook, save to database, etc.)
+
+            } catch (error) {
+                alert('Invalid JSON format: ' + error.message);
+            }
+        }
+
+        function clearResults() {
+            if (confirm('Clear all results and start over?')) {
+                document.getElementById('resultsCard').style.display = 'none';
+                document.getElementById('jobInfo').style.display = 'none';
+                document.getElementById('manualInputSection').style.display = 'none';
+                document.getElementById('jsonResultSection').style.display = 'none';
+                document.getElementById('manualJsonInput').value = '';
+                document.getElementById('jsonDataView').value = '';
+            }
         }
 
         // Event Listeners
