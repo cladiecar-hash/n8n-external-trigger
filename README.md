@@ -92,11 +92,50 @@ Se usi Linux o Mac, abbiamo script `.sh` pronti all'uso!
 
 ---
 
+## 🚂 Deploy in Produzione (Railway.app)
+
+Per uso in produzione con **URL HTTPS fisso**, usa **Railway.app**:
+
+### ✨ Vantaggi:
+- 🆓 **Gratis** ($5 crediti/mese - sufficiente per questa app)
+- 🌐 **URL HTTPS fisso** (non cambia mai!)
+- ⚡ **Deploy automatico** da GitHub
+- 🚀 **Sempre online 24/7** (niente sleep mode)
+- 📊 **Logs e monitoring** inclusi
+
+### 🚀 Quick Deploy:
+
+1. **Push** il codice su GitHub
+2. **Connetti** Railway.app al repository
+3. **Deploy** automatico in ~3 minuti
+4. **Ottieni** URL fisso (es: `https://tua-app.up.railway.app`)
+5. **Configura** in n8n (una volta sola!)
+6. ✅ **Done!**
+
+📖 **Guida completa**: Vedi [RAILWAY-DEPLOYMENT.md](RAILWAY-DEPLOYMENT.md)
+
+**Dopo il deploy:**
+- ❌ Non serve più ngrok
+- ❌ Non serve tenere PC acceso
+- ❌ Non serve aggiornare URL
+- ✅ App sempre online
+- ✅ Callback automatici funzionano
+- ✅ Gratis per sempre (con $5 crediti/mese)
+
+---
+
 ## 📚 Documentazione
 
+### **Setup e Configurazione:**
+- **[RAILWAY-DEPLOYMENT.md](RAILWAY-DEPLOYMENT.md)** ⭐ - Deploy in produzione su Railway.app
+- **[INSTALL-PYTHON-WINDOWS.md](INSTALL-PYTHON-WINDOWS.md)** - Installazione Python per Windows
 - **[BATCH-SCRIPTS-GUIDE.md](BATCH-SCRIPTS-GUIDE.md)** - Guida script Windows (.bat)
+
+### **Sviluppo Locale:**
 - **[NGROK-SETUP.md](NGROK-SETUP.md)** - Setup ngrok per callback automatici
 - **[TESTING-GUIDE.md](TESTING-GUIDE.md)** - Guida test e troubleshooting
+
+### **Configurazione Servizi:**
 - **[N8N-SETUP.md](N8N-SETUP.md)** - Configurazione workflow n8n
 - **[QUICK-START.md](QUICK-START.md)** - Guida rapida primo utilizzo
 - **[SETUP-GOOGLE.md](SETUP-GOOGLE.md)** - Setup Google Cloud API
