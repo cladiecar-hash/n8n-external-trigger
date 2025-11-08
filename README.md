@@ -18,6 +18,91 @@ Applicazione web per inviare file PDF da Google Drive a un webhook n8n con codic
 1. **Google Cloud Project** con Google Drive API abilitata
 2. **Credenziali OAuth 2.0** (Client ID e API Key)
 3. **Webhook n8n** configurato e funzionante
+4. **Python 3.x** (per il server Flask con callback system)
+5. **ngrok** (opzionale, per callback automatici da n8n)
+
+---
+
+## 🪟 Quick Start per Windows
+
+Se usi Windows, abbiamo script `.bat` pronti all'uso per avviare tutto facilmente!
+
+### ⚡ Avvio Rapido (3 passi)
+
+1. **Installa le dipendenze** (solo la prima volta):
+   ```
+   Doppio click su: install-dependencies.bat
+   ```
+
+2. **Avvia tutto** (server + ngrok):
+   ```
+   Doppio click su: start-all.bat
+   ```
+
+3. **Configura e usa l'app**:
+   - Copia l'URL HTTPS da ngrok
+   - Vai a Settings nell'app
+   - Incolla in "Callback URL" aggiungendo `/api/callback`
+   - Usa l'app normalmente!
+
+### 📂 Script Disponibili
+
+- **start-all.bat** ⭐ - Avvia server Flask + ngrok (raccomandato)
+- **start-server.bat** - Avvia solo il server Flask
+- **start-ngrok.bat** - Avvia solo ngrok
+- **open-app.bat** - Apre l'app nel browser
+- **test-endpoints.bat** - Testa che tutto funzioni
+- **stop-all.bat** - Ferma tutti i servizi
+- **open-ngrok-web.bat** - Apre interfaccia web ngrok
+
+📖 **Guida completa**: Vedi [BATCH-SCRIPTS-GUIDE.md](BATCH-SCRIPTS-GUIDE.md)
+
+---
+
+## 🐧 Quick Start per Linux/Mac
+
+Se usi Linux o Mac, abbiamo script `.sh` pronti all'uso!
+
+### ⚡ Avvio Rapido (3 passi)
+
+1. **Installa le dipendenze** (solo la prima volta):
+   ```bash
+   chmod +x *.sh
+   ./install-dependencies.sh
+   ```
+
+2. **Avvia il server** (in un terminale):
+   ```bash
+   ./start-server.sh
+   ```
+
+3. **Avvia ngrok** (in un altro terminale - opzionale):
+   ```bash
+   ./start-ngrok.sh
+   ```
+
+### 📂 Script Disponibili
+
+- **start-server.sh** - Avvia il server Flask
+- **start-ngrok.sh** - Avvia ngrok per callback automatici
+- **install-dependencies.sh** - Installa dipendenze Python
+- **open-app.sh** - Apre l'app nel browser
+
+📝 **Nota**: Per usarli, prima rendili eseguibili con `chmod +x *.sh`
+
+---
+
+## 📚 Documentazione
+
+- **[BATCH-SCRIPTS-GUIDE.md](BATCH-SCRIPTS-GUIDE.md)** - Guida script Windows (.bat)
+- **[NGROK-SETUP.md](NGROK-SETUP.md)** - Setup ngrok per callback automatici
+- **[TESTING-GUIDE.md](TESTING-GUIDE.md)** - Guida test e troubleshooting
+- **[N8N-SETUP.md](N8N-SETUP.md)** - Configurazione workflow n8n
+- **[QUICK-START.md](QUICK-START.md)** - Guida rapida primo utilizzo
+- **[SETUP-GOOGLE.md](SETUP-GOOGLE.md)** - Setup Google Cloud API
+- **[FIX-ERROR-400.md](FIX-ERROR-400.md)** - Fix errore 400 OAuth
+
+---
 
 ## 🚀 Setup Google Cloud Project
 

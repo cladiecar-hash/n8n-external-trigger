@@ -1,34 +1,57 @@
 #!/bin/bash
+# ========================================
+#  Start Flask Server
+# ========================================
 
-echo "🚀 Avvio Server per Google Drive PDF App..."
 echo ""
-echo "📂 Cartella: $(pwd)"
+echo "╔══════════════════════════════════════════════════════════╗"
+echo "║  🚀 Starting Flask Server...                            ║"
+echo "╚══════════════════════════════════════════════════════════╝"
 echo ""
 
-# Verifica se Python 3 è disponibile
-if command -v python3 &> /dev/null; then
-    echo "✓ Python 3 trovato"
-    echo "🌐 Apertura server su http://localhost:8000"
+# Navigate to script directory
+cd "$(dirname "$0")"
+
+# Check if Python is installed
+if ! command -v python3 &> /dev/null; then
+    echo "❌ ERROR: Python 3 is not installed"
     echo ""
-    echo "👉 Apri il browser e vai su: http://localhost:8000"
+    echo "Please install Python 3:"
+    echo "  - Ubuntu/Debian: sudo apt install python3 python3-pip"
+    echo "  - Mac: brew install python3"
     echo ""
-    echo "⏹️  Per fermare il server: premi CTRL+C"
-    echo ""
-    python3 -m http.server 8000
-elif command -v python &> /dev/null; then
-    echo "✓ Python trovato"
-    echo "🌐 Apertura server su http://localhost:8000"
-    echo ""
-    echo "👉 Apri il browser e vai su: http://localhost:8000"
-    echo ""
-    echo "⏹️  Per fermare il server: premi CTRL+C"
-    echo ""
-    python -m SimpleHTTPServer 8000
-else
-    echo "❌ Python non trovato"
-    echo ""
-    echo "Opzioni alternative:"
-    echo "1. Installa Python da https://www.python.org/"
-    echo "2. Apri index.html direttamente con doppio click"
-    echo "3. Usa un altro server locale (Node.js, PHP, ecc.)"
+    exit 1
 fi
+
+# Check if server.py exists
+if [ ! -f "server.py" ]; then
+    echo "❌ ERROR: server.py not found"
+    echo "Make sure you're in the correct directory"
+    exit 1
+fi
+
+# Check if dependencies are installed
+if ! python3 -c "import flask" &> /dev/null; then
+    echo ""
+    echo "⚠️  Flask is not installed"
+    echo "Installing dependencies..."
+    echo ""
+    pip3 install -r requirements.txt
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "❌ Failed to install dependencies"
+        exit 1
+    fi
+fi
+
+echo ""
+echo "✅ Starting Flask server on http://localhost:8000"
+echo ""
+echo "📝 Keep this terminal open while using the app"
+echo "🛑 Press CTRL+C to stop the server"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Start the server
+python3 server.py
