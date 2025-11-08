@@ -452,6 +452,124 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
+        /* Procedure Editor Styles */
+        .procedure-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+        }
+
+        .procedure-card:hover {
+            box-shadow: var(--shadow);
+        }
+
+        .procedure-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .procedure-number {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        .procedure-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-delete {
+            background: var(--danger);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-delete:hover {
+            background: var(--danger-dark);
+        }
+
+        .procedure-field {
+            margin-bottom: 1rem;
+        }
+
+        .procedure-field label {
+            display: block;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .procedure-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            resize: vertical;
+            min-height: 80px;
+            transition: all 0.2s;
+        }
+
+        .procedure-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .procedure-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 0.9375rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .procedure-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+
+        .category-Maintenance { background: #dbeafe; color: #1e40af; }
+        .category-Safety { background: #fee2e2; color: #991b1b; }
+        .category-Operation { background: #d1fae5; color: #065f46; }
+        .category-Instruction { background: #fef3c7; color: #92400e; }
+        .category-Installation { background: #e0e7ff; color: #3730a3; }
+        .category-Troubleshooting { background: #fed7aa; color: #9a3412; }
+        .category-Warranty { background: #fce7f3; color: #831843; }
+        .category-General { background: #f3f4f6; color: #374151; }
+        .category-Healthcare { background: #dcfce7; color: #14532d; }
+
         @media (max-width: 640px) {
             body {
                 padding: 1rem 0.75rem;
@@ -468,6 +586,12 @@
             .settings-link {
                 top: 1rem;
                 right: 1rem;
+            }
+
+            .procedure-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
             }
         }
     </style>
@@ -663,25 +787,45 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">JSON Data</label>
-                        <textarea
-                            class="form-input"
-                            id="jsonDataView"
-                            rows="15"
-                            style="font-family: monospace; font-size: 0.875rem;"
-                        ></textarea>
-                        <span class="form-hint">Edit and validate the extracted data</span>
+                    <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong id="procedureCount"></strong>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-outline" onclick="toggleRawJson()">
+                                <span>📄</span>
+                                <span id="rawJsonToggleText">Show Raw JSON</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="button-group">
+                    <!-- Raw JSON View (hidden by default) -->
+                    <div id="rawJsonView" style="display: none; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Raw JSON Data (Read-only)</label>
+                            <textarea
+                                class="form-input"
+                                id="jsonDataView"
+                                rows="15"
+                                readonly
+                                style="font-family: monospace; font-size: 0.875rem; background: #f9fafb;"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Structured Procedure Editor -->
+                    <div id="procedureEditor">
+                        <div id="procedureList"></div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
                         <button class="btn btn-primary" onclick="downloadJson()">
                             <span>⬇️</span>
                             Download JSON
                         </button>
-                        <button class="btn btn-success" onclick="validateAndSave()">
+                        <button class="btn btn-success" onclick="validateAndSendToN8n()">
                             <span>✅</span>
-                            Validate & Save
+                            Validate & Send to n8n
                         </button>
                         <button class="btn btn-outline" onclick="clearResults()">
                             <span>✕</span>
@@ -742,6 +886,12 @@
                     <span class="form-hint">Bearer token for authenticating callback requests</span>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label" for="validationWebhookUrl">Validation Webhook URL</label>
+                    <input type="url" class="form-input" id="validationWebhookUrl" placeholder="https://your-n8n.com/webhook/validation">
+                    <span class="form-hint">The webhook endpoint where validated/edited JSON will be sent</span>
+                </div>
+
                 <button class="btn btn-primary btn-lg" id="saveConfigBtn" onclick="saveConfig()">
                     <span>💾</span>
                     Save Configuration
@@ -792,13 +942,28 @@
             currentFolderName: null,
             connected: false,
             pollingInterval: null,
-            currentJobId: null
+            currentJobId: null,
+            procedures: [],
+            originalJsonData: null
         };
 
         const CONFIG = {
             DISCOVERY_DOCS: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
             SCOPES: 'https://www.googleapis.com/auth/drive.readonly'
         };
+
+        // Categories for dropdown
+        const CATEGORIES = [
+            'Maintenance',
+            'Safety',
+            'Operation',
+            'Instruction',
+            'Installation',
+            'Troubleshooting',
+            'Warranty',
+            'General Definitions',
+            'Healthcare'
+        ];
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
@@ -829,12 +994,14 @@
             const webhookUrl = localStorage.getItem('webhook_url');
             const callbackUrl = localStorage.getItem('callback_url');
             const callbackToken = localStorage.getItem('callback_token');
+            const validationWebhookUrl = localStorage.getItem('validation_webhook_url');
 
             if (clientId) document.getElementById('clientId').value = clientId;
             if (apiKey) document.getElementById('apiKey').value = apiKey;
             if (webhookUrl) document.getElementById('webhookUrl').value = webhookUrl;
             if (callbackUrl) document.getElementById('callbackUrl').value = callbackUrl;
             if (callbackToken) document.getElementById('callbackToken').value = callbackToken;
+            if (validationWebhookUrl) document.getElementById('validationWebhookUrl').value = validationWebhookUrl;
 
             return !!(clientId && apiKey && webhookUrl);
         }
@@ -845,6 +1012,7 @@
             const webhookUrl = document.getElementById('webhookUrl').value.trim();
             const callbackUrl = document.getElementById('callbackUrl').value.trim();
             const callbackToken = document.getElementById('callbackToken').value.trim();
+            const validationWebhookUrl = document.getElementById('validationWebhookUrl').value.trim();
 
             if (!clientId || !apiKey || !webhookUrl) {
                 showAlert('error', 'Please fill in required fields (Client ID, API Key, Webhook URL)', 'driveConnectionAlert');
@@ -868,11 +1036,22 @@
                 }
             }
 
+            // Validate validation webhook URL if provided
+            if (validationWebhookUrl) {
+                try {
+                    new URL(validationWebhookUrl);
+                } catch {
+                    showAlert('error', 'Invalid validation webhook URL', 'driveConnectionAlert');
+                    return;
+                }
+            }
+
             localStorage.setItem('google_client_id', clientId);
             localStorage.setItem('google_api_key', apiKey);
             localStorage.setItem('webhook_url', webhookUrl);
             localStorage.setItem('callback_url', callbackUrl);
             localStorage.setItem('callback_token', callbackToken);
+            localStorage.setItem('validation_webhook_url', validationWebhookUrl);
 
             showAlert('success', 'Configuration saved successfully!', 'driveConnectionAlert');
 
@@ -1456,6 +1635,10 @@
                 return;
             }
 
+            // Store JSON data
+            APP.originalJsonData = jsonData;
+            APP.procedures = jsonData.procedures || [];
+
             // Show summary
             resultSummary.innerHTML = `
                 <div>File: ${result.fileName || 'N/A'}</div>
@@ -1463,66 +1646,238 @@
                 ${result.durationSec ? `<div>Processing time: ${result.durationSec}s</div>` : ''}
             `;
 
-            // Show JSON in editor
+            // Show JSON in raw view (read-only)
             jsonDataView.value = JSON.stringify(jsonData, null, 2);
+
+            // Render procedure editor
+            renderProcedureEditor();
 
             // Show results section
             jsonResultSection.style.display = 'block';
         }
 
         function downloadJson() {
-            const jsonText = document.getElementById('jsonDataView').value;
-
-            if (!jsonText) {
+            if (!APP.originalJsonData) {
                 alert('No JSON data to download');
                 return;
             }
 
             try {
-                // Validate JSON
-                JSON.parse(jsonText);
+                // Update JSON with current procedures
+                const jsonData = {
+                    ...APP.originalJsonData,
+                    procedures: APP.procedures
+                };
+
+                const jsonText = JSON.stringify(jsonData, null, 2);
 
                 // Create download
                 const blob = new Blob([jsonText], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `processed_${new Date().toISOString().slice(0,10)}.json`;
+                a.download = `validated_${new Date().toISOString().slice(0,10)}.json`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+
+                alert('JSON downloaded successfully!');
             } catch (error) {
-                alert('Invalid JSON format: ' + error.message);
+                alert('Error downloading JSON: ' + error.message);
             }
         }
 
-        function validateAndSave() {
-            const jsonText = document.getElementById('jsonDataView').value;
+        async function validateAndSendToN8n() {
+            const validationWebhookUrl = localStorage.getItem('validation_webhook_url');
 
-            if (!jsonText) {
-                alert('No JSON data to validate');
+            if (!validationWebhookUrl) {
+                alert('❌ Validation Webhook URL not configured!\n\nPlease go to Settings and configure the Validation Webhook URL.');
                 return;
             }
 
-            try {
-                const jsonData = JSON.parse(jsonText);
+            if (!APP.originalJsonData || !APP.procedures) {
+                alert('No data to send');
+                return;
+            }
 
-                // Basic validation
-                if (!Array.isArray(jsonData) && typeof jsonData !== 'object') {
-                    alert('JSON must be an object or array');
+            // Validate procedures
+            const emptyProcedures = APP.procedures.filter(p => !p.procedure || !p.procedure.trim());
+            if (emptyProcedures.length > 0) {
+                if (!confirm(`Warning: ${emptyProcedures.length} procedure(s) have empty content.\n\nContinue anyway?`)) {
                     return;
                 }
+            }
 
-                // TODO: Add your custom validation logic here
-                // For example, check required fields, data types, etc.
+            try {
+                // Prepare JSON with updated procedures
+                const jsonData = {
+                    ...APP.originalJsonData,
+                    procedures: APP.procedures
+                };
 
-                alert('✅ JSON is valid!\n\nYou can now:\n1. Download the JSON\n2. Send it to another endpoint\n3. Use it in your workflow');
+                // Send to validation webhook
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'alert alert-info';
+                statusDiv.style.marginTop = '1rem';
+                statusDiv.innerHTML = `
+                    <span class="alert-icon">⏳</span>
+                    <div class="alert-content">Sending validated data to n8n...</div>
+                `;
+                document.getElementById('jsonResultSection').appendChild(statusDiv);
 
-                // TODO: Implement save logic (e.g., send to another webhook, save to database, etc.)
+                const response = await fetch(validationWebhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(jsonData)
+                });
+
+                statusDiv.remove();
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json().catch(() => ({}));
+
+                alert(`✅ Validation successful!\n\nData sent to n8n successfully.\n\nProcedures: ${APP.procedures.length}\nResponse: ${response.status} ${response.statusText}`);
+
+                console.log('Validation response:', result);
 
             } catch (error) {
-                alert('Invalid JSON format: ' + error.message);
+                console.error('Error sending to n8n:', error);
+                alert(`❌ Error sending data to n8n:\n\n${error.message}\n\nCheck console for details.`);
+            }
+        }
+
+        // Procedure Editor Functions
+        function renderProcedureEditor() {
+            const procedureList = document.getElementById('procedureList');
+            const procedureCount = document.getElementById('procedureCount');
+
+            if (!APP.procedures || APP.procedures.length === 0) {
+                procedureList.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+                        <div style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem;">No Procedures Found</div>
+                        <div>The JSON data does not contain any procedures to edit.</div>
+                    </div>
+                `;
+                procedureCount.textContent = '0 procedures';
+                return;
+            }
+
+            procedureCount.textContent = `${APP.procedures.length} procedure${APP.procedures.length !== 1 ? 's' : ''}`;
+
+            procedureList.innerHTML = APP.procedures.map((proc, index) => {
+                const categoryClass = proc.category ? `category-${proc.category.replace(/\s+/g, '')}` : 'category-General';
+
+                return `
+                    <div class="procedure-card" data-index="${index}">
+                        <div class="procedure-header">
+                            <div class="procedure-number">
+                                Procedure #${index + 1}
+                                <span class="${categoryClass} category-badge">${proc.category || 'Uncategorized'}</span>
+                            </div>
+                            <div class="procedure-actions">
+                                <button class="btn-delete" onclick="deleteProcedure(${index})">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="procedure-field">
+                            <label>Procedure Content</label>
+                            <textarea
+                                class="procedure-textarea"
+                                data-index="${index}"
+                                data-field="procedure"
+                                onchange="updateProcedure(${index}, 'procedure', this.value)"
+                                placeholder="Enter procedure description..."
+                            >${proc.procedure || ''}</textarea>
+                        </div>
+
+                        <div class="procedure-field">
+                            <label>Category</label>
+                            <select
+                                class="procedure-select"
+                                data-index="${index}"
+                                data-field="category"
+                                onchange="updateProcedure(${index}, 'category', this.value)"
+                            >
+                                <option value="">Select category...</option>
+                                ${CATEGORIES.map(cat => `
+                                    <option value="${cat}" ${proc.category === cat ? 'selected' : ''}>
+                                        ${cat}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Update raw JSON view
+            if (APP.originalJsonData) {
+                const updatedJson = {
+                    ...APP.originalJsonData,
+                    procedures: APP.procedures
+                };
+                document.getElementById('jsonDataView').value = JSON.stringify(updatedJson, null, 2);
+            }
+        }
+
+        function updateProcedure(index, field, value) {
+            if (!APP.procedures[index]) return;
+
+            APP.procedures[index][field] = value;
+
+            // Update raw JSON view
+            if (APP.originalJsonData) {
+                const updatedJson = {
+                    ...APP.originalJsonData,
+                    procedures: APP.procedures
+                };
+                document.getElementById('jsonDataView').value = JSON.stringify(updatedJson, null, 2);
+            }
+
+            // Update category badge if category changed
+            if (field === 'category') {
+                const card = document.querySelector(`[data-index="${index}"]`);
+                const badge = card.querySelector('.category-badge');
+                const oldClass = Array.from(badge.classList).find(c => c.startsWith('category-'));
+                if (oldClass) badge.classList.remove(oldClass);
+                const newClass = value ? `category-${value.replace(/\s+/g, '')}` : 'category-General';
+                badge.classList.add(newClass);
+                badge.textContent = value || 'Uncategorized';
+            }
+
+            console.log(`Updated procedure ${index}, ${field}:`, value);
+        }
+
+        function deleteProcedure(index) {
+            if (!confirm(`Delete procedure #${index + 1}?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            APP.procedures.splice(index, 1);
+            renderProcedureEditor();
+
+            console.log(`Deleted procedure at index ${index}`);
+        }
+
+        function toggleRawJson() {
+            const rawJsonView = document.getElementById('rawJsonView');
+            const toggleText = document.getElementById('rawJsonToggleText');
+
+            if (rawJsonView.style.display === 'none') {
+                rawJsonView.style.display = 'block';
+                toggleText.textContent = 'Hide Raw JSON';
+            } else {
+                rawJsonView.style.display = 'none';
+                toggleText.textContent = 'Show Raw JSON';
             }
         }
 
@@ -1537,8 +1892,11 @@
                 document.getElementById('jsonResultSection').style.display = 'none';
                 document.getElementById('manualJsonInput').value = '';
                 document.getElementById('jsonDataView').value = '';
+                document.getElementById('procedureList').innerHTML = '';
 
                 APP.currentJobId = null;
+                APP.procedures = [];
+                APP.originalJsonData = null;
             }
         }
 
