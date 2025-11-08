@@ -790,7 +790,9 @@
             selectedFile: null,
             currentFolderId: null,
             currentFolderName: null,
-            connected: false
+            connected: false,
+            pollingInterval: null,
+            currentJobId: null
         };
 
         const CONFIG = {
@@ -1344,10 +1346,64 @@
             // Show manual input if no callback URL
             if (!callbackUrl) {
                 manualInputSection.style.display = 'block';
+            } else {
+                // Start polling for results
+                APP.currentJobId = jobId;
+                startPolling(jobId);
             }
 
             // Scroll to results
             resultsCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function startPolling(jobId) {
+            // Stop any existing polling
+            stopPolling();
+
+            console.log('Starting to poll for job:', jobId);
+
+            // Poll immediately
+            pollForResult(jobId);
+
+            // Then poll every 5 seconds
+            APP.pollingInterval = setInterval(() => {
+                pollForResult(jobId);
+            }, 5000);
+        }
+
+        function stopPolling() {
+            if (APP.pollingInterval) {
+                clearInterval(APP.pollingInterval);
+                APP.pollingInterval = null;
+                console.log('Stopped polling');
+            }
+        }
+
+        async function pollForResult(jobId) {
+            try {
+                const response = await fetch(`/api/result/${jobId}`);
+
+                if (response.status === 200) {
+                    // Result is ready!
+                    const result = await response.json();
+                    console.log('Result received:', result);
+
+                    // Stop polling
+                    stopPolling();
+
+                    // Display the result
+                    await displayResult(result);
+                } else if (response.status === 202) {
+                    // Still processing - continue polling
+                    console.log('Job still processing...');
+                } else {
+                    // Error
+                    console.error('Error polling for result:', response.status);
+                }
+            } catch (error) {
+                console.error('Error polling for result:', error);
+                // Don't stop polling on network errors - might be temporary
+            }
         }
 
         async function loadManualResult() {
@@ -1472,12 +1528,17 @@
 
         function clearResults() {
             if (confirm('Clear all results and start over?')) {
+                // Stop polling if active
+                stopPolling();
+
                 document.getElementById('resultsCard').style.display = 'none';
                 document.getElementById('jobInfo').style.display = 'none';
                 document.getElementById('manualInputSection').style.display = 'none';
                 document.getElementById('jsonResultSection').style.display = 'none';
                 document.getElementById('manualJsonInput').value = '';
                 document.getElementById('jsonDataView').value = '';
+
+                APP.currentJobId = null;
             }
         }
 
