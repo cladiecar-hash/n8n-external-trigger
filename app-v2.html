@@ -1635,9 +1635,23 @@
                 return;
             }
 
-            // Store JSON data
-            APP.originalJsonData = jsonData;
-            APP.procedures = jsonData.procedures || [];
+            // Store JSON data - handle both array and object formats
+            console.log('Received JSON data type:', Array.isArray(jsonData) ? 'Array' : 'Object');
+            console.log('JSON data:', jsonData);
+
+            if (Array.isArray(jsonData)) {
+                // If jsonData is directly an array of procedures
+                APP.procedures = jsonData;
+                APP.originalJsonData = {
+                    procedures: jsonData,
+                    pbs_code: result.pbs_code || '',
+                    file_name: result.fileName || ''
+                };
+            } else {
+                // If jsonData is an object with procedures property
+                APP.procedures = jsonData.procedures || [];
+                APP.originalJsonData = jsonData;
+            }
 
             // Show summary
             resultSummary.innerHTML = `
