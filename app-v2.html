@@ -2003,14 +2003,23 @@
                 // Stop polling if active
                 stopPolling();
 
+                // Hide and clear all result sections
                 document.getElementById('resultsCard').style.display = 'none';
                 document.getElementById('jobInfo').style.display = 'none';
                 document.getElementById('manualInputSection').style.display = 'none';
                 document.getElementById('jsonResultSection').style.display = 'none';
+
+                // Clear first phase diagnostic info
+                const sendStatus = document.getElementById('sendStatus');
+                sendStatus.innerHTML = '';
+                sendStatus.style.display = 'none';
+
+                // Clear input fields
                 document.getElementById('manualJsonInput').value = '';
                 document.getElementById('jsonDataView').value = '';
                 document.getElementById('procedureList').innerHTML = '';
 
+                // Reset app state
                 APP.currentJobId = null;
                 APP.procedures = [];
                 APP.originalJsonData = null;
