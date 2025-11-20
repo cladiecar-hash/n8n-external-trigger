@@ -1543,6 +1543,18 @@
             const searchTerm = document.getElementById('fileSearch').value.trim();
             const fileList = document.getElementById('fileList');
 
+            // If at root level and no search term, show message to select a folder
+            if (!APP.currentFolderId && !searchTerm) {
+                fileList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📂</div>
+                        <div class="empty-state-title">Select a folder first</div>
+                        <div>Navigate to a folder above to see PDF files, or use search to find files by name</div>
+                    </div>
+                `;
+                return;
+            }
+
             fileList.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading files...</span></div>';
 
             try {
@@ -1575,7 +1587,7 @@
                         <div class="empty-state">
                             <div class="empty-state-icon">📄</div>
                             <div class="empty-state-title">No PDF files found</div>
-                            <div>${APP.currentFolderId ? 'No PDF files in this folder' : 'Try a different search term or upload PDFs to your Google Drive'}</div>
+                            <div>${APP.currentFolderId ? 'No PDF files in this folder' : 'Try a different search term'}</div>
                         </div>
                     `;
                     return;
