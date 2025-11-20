@@ -1292,49 +1292,116 @@
             folderList.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading folders...</span></div>';
 
             try {
-                let query = "mimeType='application/vnd.google-apps.folder' and trashed=false";
+                let folders = [];
 
-                // If we're in a specific folder, show its subfolders
-                if (APP.currentFolderId) {
+                // If we're at root level (no current folder)
+                if (!APP.currentFolderId) {
+                    // If there's a search term, search everywhere
+                    if (searchTerm) {
+                        let query = "mimeType='application/vnd.google-apps.folder' and trashed=false";
+                        query += ` and name contains '${searchTerm}'`;
+
+                        const response = await gapi.client.drive.files.list({
+                            q: query,
+                            pageSize: 50,
+                            fields: 'files(id, name, modifiedTime, driveId, parents)',
+                            orderBy: 'name',
+                            corpora: 'allDrives',
+                            includeItemsFromAllDrives: true,
+                            supportsAllDrives: true
+                        });
+
+                        folders = response.result.files || [];
+                    } else {
+                        // Show only root-level folders from My Drive + Shared Drives
+
+                        // 1. Get root folders from My Drive
+                        const myDriveQuery = "mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false";
+                        const myDriveResponse = await gapi.client.drive.files.list({
+                            q: myDriveQuery,
+                            pageSize: 50,
+                            fields: 'files(id, name, modifiedTime)',
+                            orderBy: 'name',
+                            corpora: 'user',
+                            supportsAllDrives: true
+                        });
+
+                        // 2. Get Shared Drives
+                        const sharedDrivesResponse = await gapi.client.drive.drives.list({
+                            pageSize: 50,
+                            fields: 'drives(id, name)'
+                        });
+
+                        // Combine: My Drive folders + Shared Drives
+                        const myDriveFolders = (myDriveResponse.result.files || []).map(f => ({
+                            ...f,
+                            isMyDrive: true
+                        }));
+
+                        const sharedDrives = (sharedDrivesResponse.result.drives || []).map(d => ({
+                            id: d.id,
+                            name: d.name,
+                            isSharedDrive: true,
+                            driveId: d.id
+                        }));
+
+                        folders = [...myDriveFolders, ...sharedDrives];
+                    }
+                } else {
+                    // We're inside a folder - show its subfolders
+                    let query = "mimeType='application/vnd.google-apps.folder' and trashed=false";
                     query += ` and '${APP.currentFolderId}' in parents`;
+
+                    // Add search term if provided
+                    if (searchTerm) {
+                        query += ` and name contains '${searchTerm}'`;
+                    }
+
+                    const response = await gapi.client.drive.files.list({
+                        q: query,
+                        pageSize: 50,
+                        fields: 'files(id, name, modifiedTime, driveId)',
+                        orderBy: 'name',
+                        corpora: 'allDrives',
+                        includeItemsFromAllDrives: true,
+                        supportsAllDrives: true
+                    });
+
+                    folders = response.result.files || [];
                 }
-
-                // Add search term if provided
-                if (searchTerm) {
-                    query += ` and name contains '${searchTerm}'`;
-                }
-
-                const response = await gapi.client.drive.files.list({
-                    q: query,
-                    pageSize: 50,
-                    fields: 'files(id, name, modifiedTime, driveId)',
-                    orderBy: 'name',
-                    corpora: 'allDrives',  // Search in both My Drive and Shared Drives
-                    includeItemsFromAllDrives: true,  // Include items from Shared Drives
-                    supportsAllDrives: true  // Support Shared Drives API
-                });
-
-                const folders = response.result.files;
 
                 if (!folders || folders.length === 0) {
                     folderList.innerHTML = `
                         <div class="empty-state">
                             <div class="empty-state-icon">📂</div>
                             <div class="empty-state-title">No folders found</div>
-                            <div>${APP.currentFolderId ? 'No subfolders in this location' : 'Try a different search term'}</div>
+                            <div>${APP.currentFolderId ? 'No subfolders in this location' : (searchTerm ? 'Try a different search term' : 'No folders in your Drive')}</div>
                         </div>
                     `;
                     return;
                 }
 
                 folderList.innerHTML = folders.map(folder => {
-                    const isDriveFolder = folder.driveId ? '🔗' : '📂';
+                    let icon = '📂';
+                    let location = 'My Drive';
+
+                    if (folder.isSharedDrive) {
+                        icon = '🔗';
+                        location = 'Shared Drive';
+                    } else if (folder.driveId) {
+                        icon = '📂';
+                        location = 'Shared Drive';
+                    } else if (folder.isMyDrive) {
+                        icon = '📂';
+                        location = 'My Drive';
+                    }
+
                     return `
                         <div class="file-item" onclick='navigateToFolder("${folder.id}", "${folder.name.replace(/'/g, "\\'")}");'>
-                            <span class="file-icon">${isDriveFolder}</span>
+                            <span class="file-icon">${icon}</span>
                             <div class="file-info">
                                 <div class="file-name">${folder.name}</div>
-                                <div class="file-meta">${folder.driveId ? 'Shared Drive' : 'My Drive'}</div>
+                                <div class="file-meta">${location}</div>
                             </div>
                         </div>
                     `;
