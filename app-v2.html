@@ -743,6 +743,17 @@
                     </h2>
                 </div>
 
+                <!-- Breadcrumb Navigation -->
+                <div id="folderBreadcrumb" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 0.5rem; display: none;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-outline" onclick="navigateToRoot()" style="padding: 0.5rem 1rem;">
+                            <span>🏠</span>
+                            <span>My Drive + Shared Drives</span>
+                        </button>
+                        <span id="breadcrumbPath" style="display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;"></span>
+                    </div>
+                </div>
+
                 <div class="search-box">
                     <input type="text" class="form-input" id="folderSearch" placeholder="Search for folders...">
                     <button class="btn btn-primary" onclick="searchFolders()">
@@ -751,20 +762,12 @@
                     </button>
                 </div>
 
-                <div class="file-list" id="folderList" style="max-height: 300px;">
+                <div class="file-list" id="folderList" style="max-height: 400px;">
                     <div class="empty-state">
                         <div class="empty-state-icon">📂</div>
-                        <div class="empty-state-title">Search for folders</div>
-                        <div>Enter a folder name above or leave blank to see all folders</div>
+                        <div class="empty-state-title">Browse or search for folders</div>
+                        <div>Click the search button or leave blank to see all folders in the current location</div>
                     </div>
-                </div>
-
-                <div id="currentFolderBreadcrumb" style="display: none; margin-top: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="color: var(--text-secondary); font-size: 0.875rem;">Current folder:</span>
-                    <span id="currentFolderName" style="font-weight: 600; color: var(--primary);"></span>
-                    <button class="btn btn-outline btn-icon" onclick="clearFolder()" title="Clear folder filter" style="margin-left: auto;">
-                        <span>✕</span>
-                    </button>
                 </div>
             </div>
 
@@ -1037,6 +1040,7 @@
             selectedFile: null,
             currentFolderId: null,
             currentFolderName: null,
+            folderPath: [],  // Breadcrumb navigation path
             connected: false,
             pollingInterval: null,
             currentJobId: null,
@@ -1289,15 +1293,25 @@
 
             try {
                 let query = "mimeType='application/vnd.google-apps.folder' and trashed=false";
+
+                // If we're in a specific folder, show its subfolders
+                if (APP.currentFolderId) {
+                    query += ` and '${APP.currentFolderId}' in parents`;
+                }
+
+                // Add search term if provided
                 if (searchTerm) {
                     query += ` and name contains '${searchTerm}'`;
                 }
 
                 const response = await gapi.client.drive.files.list({
                     q: query,
-                    pageSize: 20,
-                    fields: 'files(id, name, modifiedTime)',
-                    orderBy: 'name'
+                    pageSize: 50,
+                    fields: 'files(id, name, modifiedTime, driveId)',
+                    orderBy: 'name',
+                    corpora: 'allDrives',  // Search in both My Drive and Shared Drives
+                    includeItemsFromAllDrives: true,  // Include items from Shared Drives
+                    supportsAllDrives: true  // Support Shared Drives API
                 });
 
                 const folders = response.result.files;
@@ -1307,20 +1321,27 @@
                         <div class="empty-state">
                             <div class="empty-state-icon">📂</div>
                             <div class="empty-state-title">No folders found</div>
-                            <div>Try a different search term</div>
+                            <div>${APP.currentFolderId ? 'No subfolders in this location' : 'Try a different search term'}</div>
                         </div>
                     `;
                     return;
                 }
 
-                folderList.innerHTML = folders.map(folder => `
-                    <div class="file-item" onclick='selectFolder("${folder.id}", "${folder.name.replace(/'/g, "\\'")}");'>
-                        <span class="file-icon">📂</span>
-                        <div class="file-info">
-                            <div class="file-name">${folder.name}</div>
+                folderList.innerHTML = folders.map(folder => {
+                    const isDriveFolder = folder.driveId ? '🔗' : '📂';
+                    return `
+                        <div class="file-item" onclick='navigateToFolder("${folder.id}", "${folder.name.replace(/'/g, "\\'")}");'>
+                            <span class="file-icon">${isDriveFolder}</span>
+                            <div class="file-info">
+                                <div class="file-name">${folder.name}</div>
+                                <div class="file-meta">${folder.driveId ? 'Shared Drive' : 'My Drive'}</div>
+                            </div>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
+
+                // Show breadcrumb
+                updateBreadcrumb();
 
             } catch (error) {
                 console.error('Error loading folders:', error);
@@ -1334,27 +1355,116 @@
             }
         }
 
-        function selectFolder(folderId, folderName) {
+        function navigateToFolder(folderId, folderName) {
+            // Add current folder to path
+            APP.folderPath.push({
+                id: APP.currentFolderId,
+                name: APP.currentFolderName
+            });
+
+            // Set new current folder
             APP.currentFolderId = folderId;
             APP.currentFolderName = folderName;
 
-            // Show breadcrumb
-            document.getElementById('currentFolderBreadcrumb').style.display = 'flex';
-            document.getElementById('currentFolderName').textContent = folderName;
+            // Update breadcrumb
+            updateBreadcrumb();
+
+            // Load subfolders
+            searchFolders();
 
             // Load files from this folder
             searchFiles();
         }
 
-        function clearFolder() {
+        function navigateToRoot() {
             APP.currentFolderId = null;
             APP.currentFolderName = null;
+            APP.folderPath = [];
 
-            // Hide breadcrumb
-            document.getElementById('currentFolderBreadcrumb').style.display = 'none';
-
-            // Reload all files
+            updateBreadcrumb();
+            searchFolders();
             searchFiles();
+        }
+
+        function navigateBack() {
+            if (APP.folderPath.length === 0) {
+                navigateToRoot();
+                return;
+            }
+
+            // Get parent folder from path
+            const parent = APP.folderPath.pop();
+            APP.currentFolderId = parent.id;
+            APP.currentFolderName = parent.name;
+
+            updateBreadcrumb();
+            searchFolders();
+            searchFiles();
+        }
+
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('folderBreadcrumb');
+            const breadcrumbPath = document.getElementById('breadcrumbPath');
+
+            if (!APP.currentFolderId && APP.folderPath.length === 0) {
+                // At root - hide breadcrumb
+                breadcrumb.style.display = 'none';
+                return;
+            }
+
+            // Show breadcrumb
+            breadcrumb.style.display = 'block';
+
+            // Build path
+            let pathHtml = '';
+
+            // Add parent folders
+            APP.folderPath.forEach((folder, index) => {
+                if (folder.id && folder.name) {
+                    pathHtml += `
+                        <span style="color: var(--text-light);">›</span>
+                        <button class="btn btn-outline" onclick="navigateToPathIndex(${index})" style="padding: 0.5rem 1rem;">
+                            ${folder.name}
+                        </button>
+                    `;
+                }
+            });
+
+            // Add current folder
+            if (APP.currentFolderName) {
+                pathHtml += `
+                    <span style="color: var(--text-light);">›</span>
+                    <span style="padding: 0.5rem 1rem; font-weight: 600; color: var(--primary);">${APP.currentFolderName}</span>
+                `;
+            }
+
+            breadcrumbPath.innerHTML = pathHtml;
+        }
+
+        function navigateToPathIndex(index) {
+            // Navigate to a specific folder in the path
+            const targetFolder = APP.folderPath[index];
+
+            // Remove all folders after this index
+            APP.folderPath = APP.folderPath.slice(0, index);
+
+            // Set current folder
+            APP.currentFolderId = targetFolder.id;
+            APP.currentFolderName = targetFolder.name;
+
+            updateBreadcrumb();
+            searchFolders();
+            searchFiles();
+        }
+
+        // Keep selectFolder for backward compatibility
+        function selectFolder(folderId, folderName) {
+            navigateToFolder(folderId, folderName);
+        }
+
+        // Keep clearFolder for backward compatibility
+        function clearFolder() {
+            navigateToRoot();
         }
 
         // File Operations
@@ -1383,9 +1493,12 @@
 
                 const response = await gapi.client.drive.files.list({
                     q: query,
-                    pageSize: 30,
-                    fields: 'files(id, name, size, modifiedTime, webViewLink)',
-                    orderBy: 'modifiedTime desc'
+                    pageSize: 50,
+                    fields: 'files(id, name, size, modifiedTime, webViewLink, driveId)',
+                    orderBy: 'modifiedTime desc',
+                    corpora: 'allDrives',  // Search in both My Drive and Shared Drives
+                    includeItemsFromAllDrives: true,  // Include items from Shared Drives
+                    supportsAllDrives: true  // Support Shared Drives API
                 });
 
                 const files = response.result.files;
@@ -1395,7 +1508,7 @@
                         <div class="empty-state">
                             <div class="empty-state-icon">📄</div>
                             <div class="empty-state-title">No PDF files found</div>
-                            <div>Try a different search term or upload PDFs to your Google Drive</div>
+                            <div>${APP.currentFolderId ? 'No PDF files in this folder' : 'Try a different search term or upload PDFs to your Google Drive'}</div>
                         </div>
                     `;
                     return;
@@ -1408,13 +1521,14 @@
                         month: 'short',
                         day: 'numeric'
                     });
+                    const location = file.driveId ? 'Shared Drive' : 'My Drive';
 
                     return `
                         <div class="file-item" onclick='selectFile(${JSON.stringify(file)})'>
                             <span class="file-icon">📄</span>
                             <div class="file-info">
                                 <div class="file-name">${file.name}</div>
-                                <div class="file-meta">${size} • Modified ${date}</div>
+                                <div class="file-meta">${size} • ${location} • Modified ${date}</div>
                             </div>
                         </div>
                     `;
