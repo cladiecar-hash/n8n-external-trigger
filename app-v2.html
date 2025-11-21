@@ -1108,6 +1108,7 @@
             const callbackUrl = localStorage.getItem('callback_url');
             const callbackToken = localStorage.getItem('callback_token');
             const validationWebhookUrl = localStorage.getItem('validation_webhook_url');
+            const lastPbsCode = localStorage.getItem('last_pbs_code');
 
             if (clientId) document.getElementById('clientId').value = clientId;
             if (apiKey) document.getElementById('apiKey').value = apiKey;
@@ -1115,6 +1116,12 @@
             if (callbackUrl) document.getElementById('callbackUrl').value = callbackUrl;
             if (callbackToken) document.getElementById('callbackToken').value = callbackToken;
             if (validationWebhookUrl) document.getElementById('validationWebhookUrl').value = validationWebhookUrl;
+
+            // Load last PBS code if available
+            const pbsCodeInput = document.getElementById('pbsCode');
+            if (pbsCodeInput && lastPbsCode) {
+                pbsCodeInput.value = lastPbsCode;
+            }
 
             return !!(clientId && apiKey && webhookUrl);
         }
@@ -1754,6 +1761,9 @@
                     `;
                 }
 
+                // Save PBS code for next time
+                localStorage.setItem('last_pbs_code', pbsCode);
+
                 document.getElementById('pbsCode').value = '';
                 clearSelection();
 
@@ -2041,11 +2051,14 @@
 
                 // Send to validation webhook
                 const statusDiv = document.createElement('div');
-                statusDiv.className = 'alert alert-info';
+                statusDiv.className = 'loading';
                 statusDiv.style.marginTop = '1rem';
+                statusDiv.style.padding = '1rem';
+                statusDiv.style.background = 'var(--bg-secondary)';
+                statusDiv.style.borderRadius = '0.5rem';
                 statusDiv.innerHTML = `
-                    <span class="alert-icon">⏳</span>
-                    <div class="alert-content">Sending validated data to n8n...</div>
+                    <div class="spinner"></div>
+                    <span>Sending validated data to n8n...</span>
                 `;
                 document.getElementById('jsonResultSection').appendChild(statusDiv);
 
