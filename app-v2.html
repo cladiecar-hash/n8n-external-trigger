@@ -1920,15 +1920,19 @@
 
         async function displayResult(result) {
             const jobStatusBadge = document.getElementById('jobStatusBadge');
-            const jobStatusText = document.getElementById('jobStatusText');
             const manualInputSection = document.getElementById('manualInputSection');
             const jsonResultSection = document.getElementById('jsonResultSection');
             const resultSummary = document.getElementById('resultSummary');
             const jsonDataView = document.getElementById('jsonDataView');
 
-            // Update status to ready
+            // Update status to ready with checkmark
             jobStatusBadge.className = 'status-badge connected';
-            jobStatusText.textContent = 'Ready';
+            jobStatusBadge.style.display = 'inline-flex';
+            jobStatusBadge.style.gap = '0.5rem';
+            jobStatusBadge.innerHTML = `
+                <span class="status-dot"></span>
+                <span>Ready</span>
+            `;
 
             // Hide manual input
             manualInputSection.style.display = 'none';
