@@ -667,15 +667,15 @@
             margin-left: 0.5rem;
         }
 
-        .category-Maintenance { background: #dbeafe; color: #1e40af; }
-        .category-Safety { background: #fee2e2; color: #991b1b; }
-        .category-Operation { background: #d1fae5; color: #065f46; }
-        .category-Instruction { background: #fef3c7; color: #92400e; }
-        .category-Installation { background: #e0e7ff; color: #3730a3; }
-        .category-Troubleshooting { background: #fed7aa; color: #9a3412; }
-        .category-Warranty { background: #fce7f3; color: #831843; }
+        .category-INSTALLATION-AND-COMMISSIONING { background: #e0e7ff; color: #3730a3; }
+        .category-OPERATION { background: #d1fae5; color: #065f46; }
+        .category-PREVENTIVE-MAINTENANCE { background: #fef3c7; color: #92400e; }
+        .category-CORRECTIVE-MAINTENANCE-TROUBLESHOOTING { background: #fed7aa; color: #9a3412; }
+        .category-WARRANTY-AND-COMPLIANCE { background: #fce7f3; color: #831843; }
+        .category-SAFETY-AND-HAZARD-MITIGATION { background: #fee2e2; color: #991b1b; }
+        .category-EMERGENCY-FIRST-AID { background: #fecaca; color: #7f1d1d; }
+        .category-INSTRUCTION { background: #fef9c3; color: #713f12; }
         .category-General { background: #f3f4f6; color: #374151; }
-        .category-Healthcare { background: #dcfce7; color: #14532d; }
 
         @media (max-width: 640px) {
             body {
@@ -1067,15 +1067,14 @@
 
         // Categories for dropdown
         const CATEGORIES = [
-            'Maintenance',
-            'Safety',
-            'Operation',
-            'Instruction',
-            'Installation',
-            'Troubleshooting',
-            'Warranty',
-            'General Definitions',
-            'Healthcare'
+            'INSTALLATION_AND_COMMISSIONING',
+            'OPERATION',
+            'PREVENTIVE_MAINTENANCE',
+            'CORRECTIVE_MAINTENANCE_TROUBLESHOOTING',
+            'WARRANTY_AND_COMPLIANCE',
+            'SAFETY_AND_HAZARD_MITIGATION',
+            'EMERGENCY_FIRST_AID',
+            'INSTRUCTION'
         ];
 
         // Initialize
@@ -1973,11 +1972,20 @@
                 APP.originalJsonData = jsonData;
             }
 
-            // Show summary
+            // Show summary with all callback fields
+            const durationLabel = result.durationSec
+                ? (result.durationSec >= 60
+                    ? `${Math.floor(result.durationSec / 60)}m ${result.durationSec % 60}s`
+                    : `${result.durationSec}s`)
+                : null;
+
             resultSummary.innerHTML = `
-                <div>File: ${result.fileName || 'N/A'}</div>
-                ${result.items ? `<div>Items found: ${result.items}</div>` : ''}
-                ${result.durationSec ? `<div>Processing time: ${result.durationSec}s</div>` : ''}
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+                    ${result.fileName ? `<div><strong>File:</strong> ${result.fileName}</div>` : ''}
+                    ${result.jobId ? `<div><strong>Job ID:</strong> ${result.jobId}</div>` : ''}
+                    ${result.items != null ? `<div><strong>Procedures:</strong> ${result.items}</div>` : ''}
+                    ${durationLabel ? `<div><strong>Processing time:</strong> ${durationLabel}</div>` : ''}
+                </div>
             `;
 
             // Show JSON in raw view (read-only)
@@ -2044,12 +2052,13 @@
             }
 
             try {
-                // Prepare JSON with updated procedures (including 'page' field)
-                // Send only procedures array, without PBS code or other metadata
+                // Prepare JSON with updated procedures including all fields
                 const proceduresWithPage = APP.procedures.map(proc => ({
                     procedure: proc.procedure,
+                    title: proc.title || '',
+                    paragraph: proc.paragraph || '',
                     category: proc.category,
-                    page: proc.page  // Include original page field
+                    page: proc.page
                 }));
 
                 const jsonData = {
@@ -2116,20 +2125,51 @@
             procedureCount.textContent = `${APP.procedures.length} procedure${APP.procedures.length !== 1 ? 's' : ''}`;
 
             procedureList.innerHTML = APP.procedures.map((proc, index) => {
-                const categoryClass = proc.category ? `category-${proc.category.replace(/\s+/g, '')}` : 'category-General';
+                const categoryClass = proc.category
+                    ? `category-${proc.category.replace(/_/g, '-')}`
+                    : 'category-General';
+                const categoryLabel = proc.category
+                    ? proc.category.replace(/_/g, ' ')
+                    : 'Uncategorized';
 
                 return `
                     <div class="procedure-card" data-index="${index}">
                         <div class="procedure-header">
                             <div class="procedure-number">
                                 Procedure #${index + 1}
-                                <span class="${categoryClass} category-badge">${proc.category || 'Uncategorized'}</span>
+                                <span class="${categoryClass} category-badge">${categoryLabel}</span>
                             </div>
                             <div class="procedure-actions">
                                 <button class="btn-delete" onclick="deleteProcedure(${index})">
                                     🗑️ Delete
                                 </button>
                             </div>
+                        </div>
+
+                        <div class="procedure-field">
+                            <label>Title</label>
+                            <input
+                                type="text"
+                                class="form-input"
+                                data-index="${index}"
+                                data-field="title"
+                                value="${(proc.title || '').replace(/"/g, '&quot;')}"
+                                onchange="updateProcedure(${index}, 'title', this.value)"
+                                placeholder="Procedure title..."
+                            >
+                        </div>
+
+                        <div class="procedure-field">
+                            <label>Paragraph / Section</label>
+                            <input
+                                type="text"
+                                class="form-input"
+                                data-index="${index}"
+                                data-field="paragraph"
+                                value="${(proc.paragraph || '').replace(/"/g, '&quot;')}"
+                                onchange="updateProcedure(${index}, 'paragraph', this.value)"
+                                placeholder="e.g. 1.1.General Instructions"
+                            >
                         </div>
 
                         <div class="procedure-field">
@@ -2154,7 +2194,7 @@
                                 <option value="">Select category...</option>
                                 ${CATEGORIES.map(cat => `
                                     <option value="${cat}" ${proc.category === cat ? 'selected' : ''}>
-                                        ${cat}
+                                        ${cat.replace(/_/g, ' ')}
                                     </option>
                                 `).join('')}
                             </select>
