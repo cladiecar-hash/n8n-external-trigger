@@ -399,6 +399,14 @@ async function pollJobStatus(jobId, updateCallback) {
                 if (latestStatus.status === 'Completed' || latestStatus.status === 'completed') {
                     clearInterval(pollingInterval);
                     resolve(latestStatus);
+                } else if (latestStatus.status === 'Semantic Fix Completed') {
+                    // Stato finale di successo
+                    clearInterval(pollingInterval);
+                    resolve(latestStatus);
+                } else if (latestStatus.status && latestStatus.status.endsWith('Aborted')) {
+                    // Processo abortito - ferma il polling
+                    clearInterval(pollingInterval);
+                    reject(new Error(`Processo interrotto: ${latestStatus.status}${latestStatus.error_message ? ' - ' + latestStatus.error_message : ''}`));
                 } else if (latestStatus.status === 'Error' || latestStatus.status === 'error' || latestStatus.error_message) {
                     clearInterval(pollingInterval);
                     reject(new Error(latestStatus.error_message || 'Errore nel processo'));
@@ -501,12 +509,17 @@ async function sendToWebhook() {
 
                 // Processo completato con successo
                 sendStatus.className = 'status-box success';
+                const completionPercentage = finalStatus.to_process > 0
+                    ? Math.round((finalStatus.processed / finalStatus.to_process) * 100)
+                    : 100;
+
                 sendStatus.innerHTML = `
-                    <h3>✓ Elaborazione Completata!</h3>
+                    <h3>✅ Elaborazione Completata!</h3>
                     <p><strong>Job ID:</strong> ${jobId}</p>
                     <p><strong>File:</strong> ${selectedFile.name}</p>
                     <p><strong>PBS:</strong> ${pbsCode}</p>
-                    <p><strong>Processati:</strong> ${finalStatus.processed}/${finalStatus.to_process}</p>
+                    <p><strong>Stato finale:</strong> ${formatStatusName(finalStatus.status)}</p>
+                    <p><strong>Processati:</strong> ${finalStatus.processed}/${finalStatus.to_process} elementi (${completionPercentage}%)</p>
                     <p><strong>Completato:</strong> ${new Date(finalStatus.timestamp).toLocaleString('it-IT')}</p>
                 `;
 
@@ -518,11 +531,18 @@ async function sendToWebhook() {
 
             } catch (pollError) {
                 // Errore durante il polling o nel processo
-                sendStatus.className = 'status-box error';
+                const isAborted = pollError.message && pollError.message.includes('Processo interrotto');
+
+                sendStatus.className = isAborted ? 'status-box' : 'status-box error';
+                sendStatus.style.borderLeft = isAborted ? '4px solid #FF9800' : '4px solid #F44336';
+
                 sendStatus.innerHTML = `
-                    <h3>✗ Errore durante l'elaborazione</h3>
+                    <h3>${isAborted ? '⚠️ Processo Interrotto' : '❌ Errore durante l\'elaborazione'}</h3>
                     <p><strong>Job ID:</strong> ${jobId}</p>
-                    <p><strong>Errore:</strong> ${pollError.message}</p>
+                    <p><strong>File:</strong> ${selectedFile.name}</p>
+                    <p><strong>PBS:</strong> ${pbsCode}</p>
+                    <p style="color: ${isAborted ? '#FF9800' : '#F44336'};"><strong>Dettaglio:</strong> ${pollError.message}</p>
+                    ${isAborted ? '<p><small>Il workflow n8n ha interrotto l\'elaborazione. Controlla i log per maggiori dettagli.</small></p>' : ''}
                 `;
             }
 
@@ -567,28 +587,96 @@ function updateProgressUI(status) {
         ? Math.round((status.processed / status.to_process) * 100)
         : 0;
 
+    // Determina icona e colore in base allo stato
     let statusIcon = '⏳';
-    let statusText = status.status || 'Ongoing';
+    let statusColor = '#2196F3'; // Blu per in corso
+    let progressBarColor = '#2196F3';
+    const statusText = status.status || 'Ongoing';
 
-    if (status.status === 'Completed' || status.status === 'completed') {
+    // Stati completati con successo
+    if (statusText === 'Completed' || statusText === 'completed' || statusText === 'Semantic Fix Completed') {
+        statusIcon = '✅';
+        statusColor = '#4CAF50'; // Verde
+        progressBarColor = '#4CAF50';
+    }
+    // Stati in corso
+    else if (statusText.includes('Started') || statusText.includes('Ongoing')) {
+        statusIcon = '⏳';
+        statusColor = '#2196F3'; // Blu
+        progressBarColor = '#2196F3';
+    }
+    // Stati completati parziali
+    else if (statusText.includes('Completed') && !statusText.includes('Semantic Fix')) {
         statusIcon = '✓';
-    } else if (status.status === 'Error' || status.status === 'error') {
-        statusIcon = '✗';
+        statusColor = '#4CAF50'; // Verde
+        progressBarColor = '#4CAF50';
+    }
+    // Stati abortiti
+    else if (statusText.includes('Aborted') || statusText === 'Aborted') {
+        statusIcon = '⚠️';
+        statusColor = '#FF9800'; // Arancione
+        progressBarColor = '#FF9800';
+    }
+    // Stati di errore
+    else if (statusText === 'Error' || statusText === 'error') {
+        statusIcon = '❌';
+        statusColor = '#F44336'; // Rosso
+        progressBarColor = '#F44336';
     }
 
+    // Formatta il nome dello stato per una migliore leggibilità
+    const formattedStatus = formatStatusName(statusText);
+
     progressInfo.innerHTML = `
-        <div style="background: #f0f0f0; padding: 15px; border-radius: 8px;">
-            <p><strong>Stato:</strong> ${statusIcon} ${statusText}</p>
-            <p><strong>Progresso:</strong> ${status.processed} / ${status.to_process} (${percentage}%)</p>
-            <div style="background: #ddd; height: 20px; border-radius: 10px; overflow: hidden; margin: 10px 0;">
-                <div style="background: #4CAF50; height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>
+        <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; border-left: 4px solid ${statusColor};">
+            <p style="margin: 5px 0; font-size: 16px;">
+                <strong>Stato:</strong> ${statusIcon} <span style="color: ${statusColor};">${formattedStatus}</span>
+            </p>
+            <p style="margin: 5px 0;"><strong>Progresso:</strong> ${status.processed} / ${status.to_process} elementi</p>
+
+            <!-- Barra di progresso -->
+            <div style="background: #ddd; height: 24px; border-radius: 12px; overflow: hidden; margin: 10px 0; position: relative;">
+                <div style="background: ${progressBarColor}; height: 100%; width: ${percentage}%; transition: width 0.3s ease-in-out; display: flex; align-items: center; justify-content: center;">
+                    <span style="color: white; font-weight: bold; font-size: 12px; position: absolute; left: 50%; transform: translateX(-50%); z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${percentage}%</span>
+                </div>
             </div>
-            ${status.workflow_name ? `<p><small><strong>Workflow:</strong> ${status.workflow_name}</small></p>` : ''}
-            ${status.node_name ? `<p><small><strong>Nodo:</strong> ${status.node_name}</small></p>` : ''}
-            ${status.error_message ? `<p style="color: red;"><strong>Errore:</strong> ${status.error_message}</p>` : ''}
-            <p><small>Ultimo aggiornamento: ${new Date(status.timestamp).toLocaleTimeString('it-IT')}</small></p>
+
+            ${status.workflow_name ? `<p style="margin: 5px 0;"><small><strong>Workflow:</strong> ${status.workflow_name}</small></p>` : ''}
+            ${status.node_name ? `<p style="margin: 5px 0;"><small><strong>Fase:</strong> ${status.node_name}</small></p>` : ''}
+            ${status.input_file ? `<p style="margin: 5px 0;"><small><strong>File:</strong> ${status.input_file}</small></p>` : ''}
+            ${status.error_message ? `<p style="color: ${statusColor}; margin: 10px 0; padding: 10px; background: #fff3cd; border-radius: 4px;"><strong>⚠️ Messaggio:</strong> ${status.error_message}</p>` : ''}
+            <p style="margin: 5px 0; color: #666;"><small>⏱️ Aggiornato: ${new Date(status.timestamp).toLocaleTimeString('it-IT')}</small></p>
         </div>
     `;
+}
+
+function formatStatusName(status) {
+    // Formatta i nomi degli stati per una migliore leggibilità
+    const statusMap = {
+        'Parse PDF Started': '📄 Parsing PDF...',
+        'Parse PDF Completed': '📄 Parsing PDF completato',
+        'Parse PDF Aborted': '📄 Parsing PDF interrotto',
+        'Metadata Extraction Started': '🔍 Estrazione metadati...',
+        'Metadata Extraction Completed': '🔍 Metadati estratti',
+        'Metadata Extraction Aborted': '🔍 Estrazione metadati interrotta',
+        'Embedding Started': '🧬 Creazione embeddings...',
+        'Embedding Completed': '🧬 Embeddings creati',
+        'Embedding Aborted': '🧬 Creazione embeddings interrotta',
+        'Procedure Extraction Started': '📋 Estrazione procedure...',
+        'Procedure Extraction Ongoing': '📋 Estrazione procedure in corso...',
+        'Procedure Extraction Completed': '📋 Procedure estratte',
+        'Procedure Extraction Aborted': '📋 Estrazione procedure interrotta',
+        'Add Context Started': '➕ Aggiunta contesto...',
+        'Add Context Completed': '➕ Contesto aggiunto',
+        'Add Context Aborted': '➕ Aggiunta contesto interrotta',
+        'Semantic Fix Started': '🔧 Correzione semantica...',
+        'Semantic Fix Completed': '🔧 Correzione semantica completata',
+        'Aborted': '⚠️ Processo interrotto',
+        'Completed': '✅ Completato',
+        'Ongoing': '⏳ In elaborazione...'
+    };
+
+    return statusMap[status] || status;
 }
 
 // ============= UTILITY FUNCTIONS =============

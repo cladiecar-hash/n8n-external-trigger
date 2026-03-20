@@ -114,9 +114,84 @@ Il webhook n8n DEVE restituire una risposta JSON contenente il campo `job_id`:
 - **Timeout**: Dopo 10 minuti senza completamento, mostra errore di timeout
 
 ### Stati Possibili
+
+Il workflow attraversa diverse fasi di elaborazione. Ogni fase può avere tre stati: **Started**, **Completed**, o **Aborted**.
+
+#### Stati di Elaborazione
+1. **Parse PDF Started** → Parsing del PDF iniziato
+2. **Parse PDF Completed** → Parsing del PDF completato
+3. **Parse PDF Aborted** → Parsing del PDF interrotto
+
+4. **Metadata Extraction Started** → Estrazione metadati iniziata
+5. **Metadata Extraction Completed** → Estrazione metadati completata
+6. **Metadata Extraction Aborted** → Estrazione metadati interrotta
+
+7. **Embedding Started** → Creazione embeddings iniziata
+8. **Embedding Completed** → Creazione embeddings completata
+9. **Embedding Aborted** → Creazione embeddings interrotta
+
+10. **Procedure Extraction Started** → Estrazione procedure iniziata
+11. **Procedure Extraction Ongoing** → Estrazione procedure in corso
+12. **Procedure Extraction Completed** → Estrazione procedure completata
+13. **Procedure Extraction Aborted** → Estrazione procedure interrotta
+
+14. **Add Context Started** → Aggiunta contesto iniziata
+15. **Add Context Completed** → Aggiunta contesto completata
+16. **Add Context Aborted** → Aggiunta contesto interrotta
+
+17. **Semantic Fix Started** → Correzione semantica iniziata
+18. **Semantic Fix Completed** → Correzione semantica completata ✅ **(STATO FINALE DI SUCCESSO)**
+19. **Aborted** → Processo completamente interrotto
+
+#### Stati Generici (Legacy)
 - `Ongoing`: Elaborazione in corso
 - `Completed` o `completed`: Elaborazione completata
 - `Error` o `error`: Errore durante l'elaborazione
+
+#### ⚠️ Gestione Stati "Aborted"
+**IMPORTANTE**: Quando il frontend riceve uno stato che termina con "Aborted", il polling deve **fermarsi immediatamente** perché il workflow n8n ha già interrotto l'esecuzione. Non ci saranno ulteriori aggiornamenti.
+
+## Esempio di Flusso Stati nel Workflow
+
+Durante l'elaborazione, il workflow n8n dovrebbe aggiornare progressivamente il record in Supabase:
+
+```
+1. Parse PDF Started (processed: 0/100)
+   ↓
+2. Parse PDF Completed (processed: 15/100)
+   ↓
+3. Metadata Extraction Started (processed: 15/100)
+   ↓
+4. Metadata Extraction Completed (processed: 30/100)
+   ↓
+5. Embedding Started (processed: 30/100)
+   ↓
+6. Embedding Completed (processed: 50/100)
+   ↓
+7. Procedure Extraction Started (processed: 50/100)
+   ↓
+8. Procedure Extraction Ongoing (processed: 55/100)
+   ↓
+9. Procedure Extraction Completed (processed: 70/100)
+   ↓
+10. Add Context Started (processed: 70/100)
+    ↓
+11. Add Context Completed (processed: 85/100)
+    ↓
+12. Semantic Fix Started (processed: 85/100)
+    ↓
+13. Semantic Fix Completed (processed: 100/100) ✅ SUCCESSO
+```
+
+**In caso di errore:**
+```
+1. Parse PDF Started (processed: 0/100)
+   ↓
+2. [ERRORE]
+   ↓
+3. Parse PDF Aborted (processed: 0/100, error_message: "File corrotto")
+   ⚠️ WORKFLOW FERMATO
+```
 
 ## Esempio di Implementazione n8n
 
