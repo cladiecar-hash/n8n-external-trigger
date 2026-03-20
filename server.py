@@ -15,6 +15,7 @@ CORS(app)
 
 # Store callback results in memory (in production, use Redis or database)
 callback_results = {}
+validation_results = {}
 
 # Serve static files
 @app.route('/')
@@ -79,6 +80,50 @@ def receive_callback():
         print(f"❌ Error processing callback: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# Validation callback endpoint
+@app.route('/api/validation-callback', methods=['POST'])
+def receive_validation_callback():
+    """
+    Receives callback from n8n after validation processing
+    Expected payload:
+    {
+        "jobId": "20251108_042444_817453",
+        "status": "success",
+        "message": "Validation completed",
+        "itemsProcessed": 42
+    }
+    """
+    try:
+        data = request.get_json()
+
+        if not data or 'jobId' not in data:
+            return jsonify({'error': 'Missing jobId'}), 400
+
+        job_id = data['jobId']
+
+        # Store validation result
+        validation_results[job_id] = {
+            'jobId': job_id,
+            'status': data.get('status', 'success'),
+            'message': data.get('message', 'Validation completed'),
+            'itemsProcessed': data.get('itemsProcessed'),
+            'receivedAt': datetime.now().isoformat()
+        }
+
+        print(f"✅ Validation callback received for job {job_id}")
+        print(f"   Status: {data.get('status')}")
+        print(f"   Items: {data.get('itemsProcessed')}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Validation callback received',
+            'jobId': job_id
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error processing validation callback: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 # Poll endpoint for HTML app
 @app.route('/api/result/<job_id>', methods=['GET'])
 def get_result(job_id):
@@ -95,6 +140,21 @@ def get_result(job_id):
         return jsonify({
             'status': 'processing',
             'message': 'Result not ready yet'
+        }), 202
+
+# Poll endpoint for validation results
+@app.route('/api/validation-result/<job_id>', methods=['GET'])
+def get_validation_result(job_id):
+    """
+    Allows HTML app to poll for validation results
+    """
+    if job_id in validation_results:
+        result = validation_results[job_id]
+        return jsonify(result), 200
+    else:
+        return jsonify({
+            'status': 'processing',
+            'message': 'Validation result not ready yet'
         }), 202
 
 # List all results (for debugging)
@@ -118,15 +178,18 @@ def health_check():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     print(f"""
-╔══════════════════════════════════════════════════════════╗
-║  🚀 Google Drive PDF Webhook Server                     ║
-╠══════════════════════════════════════════════════════════╣
-║  Server running on: http://localhost:{port}               ║
-║  Callback endpoint: http://localhost:{port}/api/callback  ║
-║  Results endpoint:  http://localhost:{port}/api/result/   ║
-║                                                          ║
-║  📝 Ready to receive callbacks from n8n!                 ║
-╚══════════════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════════════╗
+║  🚀 Google Drive PDF Webhook Server                              ║
+╠═══════════════════════════════════════════════════════════════════╣
+║  Server running on: http://localhost:{port}                        ║
+║                                                                   ║
+║  📥 Extraction Callback:  http://localhost:{port}/api/callback     ║
+║  📤 Validation Callback:  http://localhost:{port}/api/validation-callback ║
+║  📊 Results Endpoint:     http://localhost:{port}/api/result/      ║
+║  ✅ Validation Results:   http://localhost:{port}/api/validation-result/ ║
+║                                                                   ║
+║  📝 Ready to receive callbacks from n8n!                          ║
+╚═══════════════════════════════════════════════════════════════════╝
     """)
 
     # Run with debug mode for development
