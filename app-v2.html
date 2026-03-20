@@ -1004,6 +1004,18 @@
                     <span class="form-hint">The webhook endpoint where validated/edited JSON will be sent</span>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label" for="supabaseUrl">Supabase URL <span style="color: red;">*</span></label>
+                    <input type="url" class="form-input" id="supabaseUrl" placeholder="https://xxx.supabase.co" required>
+                    <span class="form-hint">Your Supabase project URL for real-time job monitoring</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="supabaseKey">Supabase Anon Key <span style="color: red;">*</span></label>
+                    <input type="password" class="form-input" id="supabaseKey" placeholder="Your Supabase anon key" required>
+                    <span class="form-hint">Anonymous key for querying the rag_diagnostics table</span>
+                </div>
+
                 <button class="btn btn-primary btn-lg" id="saveConfigBtn" onclick="saveConfig()">
                     <span>💾</span>
                     Save Configuration
@@ -1107,6 +1119,8 @@
             const callbackUrl = localStorage.getItem('callback_url');
             const callbackToken = localStorage.getItem('callback_token');
             const validationWebhookUrl = localStorage.getItem('validation_webhook_url');
+            const supabaseUrl = localStorage.getItem('supabase_url');
+            const supabaseKey = localStorage.getItem('supabase_key');
             const lastPbsCode = localStorage.getItem('last_pbs_code');
 
             if (clientId) document.getElementById('clientId').value = clientId;
@@ -1115,6 +1129,8 @@
             if (callbackUrl) document.getElementById('callbackUrl').value = callbackUrl;
             if (callbackToken) document.getElementById('callbackToken').value = callbackToken;
             if (validationWebhookUrl) document.getElementById('validationWebhookUrl').value = validationWebhookUrl;
+            if (supabaseUrl) document.getElementById('supabaseUrl').value = supabaseUrl;
+            if (supabaseKey) document.getElementById('supabaseKey').value = supabaseKey;
 
             // Load last PBS code if available
             const pbsCodeInput = document.getElementById('pbsCode');
@@ -1122,7 +1138,7 @@
                 pbsCodeInput.value = lastPbsCode;
             }
 
-            return !!(clientId && apiKey && webhookUrl);
+            return !!(clientId && apiKey && webhookUrl && supabaseUrl && supabaseKey);
         }
 
         function saveConfig() {
@@ -1132,9 +1148,11 @@
             const callbackUrl = document.getElementById('callbackUrl').value.trim();
             const callbackToken = document.getElementById('callbackToken').value.trim();
             const validationWebhookUrl = document.getElementById('validationWebhookUrl').value.trim();
+            const supabaseUrl = document.getElementById('supabaseUrl').value.trim();
+            const supabaseKey = document.getElementById('supabaseKey').value.trim();
 
-            if (!clientId || !apiKey || !webhookUrl) {
-                showAlert('error', 'Please fill in required fields (Client ID, API Key, Webhook URL)', 'driveConnectionAlert');
+            if (!clientId || !apiKey || !webhookUrl || !supabaseUrl || !supabaseKey) {
+                showAlert('error', 'Please fill in required fields (Client ID, API Key, Webhook URL, Supabase URL, Supabase Key)', 'driveConnectionAlert');
                 return;
             }
 
@@ -1142,6 +1160,13 @@
                 new URL(webhookUrl);
             } catch {
                 showAlert('error', 'Invalid webhook URL', 'driveConnectionAlert');
+                return;
+            }
+
+            try {
+                new URL(supabaseUrl);
+            } catch {
+                showAlert('error', 'Invalid Supabase URL', 'driveConnectionAlert');
                 return;
             }
 
@@ -1171,6 +1196,8 @@
             localStorage.setItem('callback_url', callbackUrl);
             localStorage.setItem('callback_token', callbackToken);
             localStorage.setItem('validation_webhook_url', validationWebhookUrl);
+            localStorage.setItem('supabase_url', supabaseUrl);
+            localStorage.setItem('supabase_key', supabaseKey);
 
             showAlert('success', 'Configuration saved successfully!', 'driveConnectionAlert');
 
@@ -1873,30 +1900,152 @@
             }
         }
 
+        async function checkJobStatus(jobId) {
+            const supabaseUrl = localStorage.getItem('supabase_url');
+            const supabaseKey = localStorage.getItem('supabase_key');
+
+            if (!supabaseUrl || !supabaseKey) {
+                throw new Error('Supabase configuration missing');
+            }
+
+            const response = await fetch(`${supabaseUrl}/rest/v1/rag_diagnostics?job_id=eq.${jobId}&order=timestamp.desc`, {
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Supabase error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+        }
+
         async function pollForResult(jobId) {
             try {
-                const response = await fetch(`/api/result/${jobId}`);
+                const statusRecords = await checkJobStatus(jobId);
 
-                if (response.status === 200) {
-                    // Result is ready!
-                    const result = await response.json();
-                    console.log('Result received:', result);
+                if (!statusRecords || statusRecords.length === 0) {
+                    // No records yet - continue polling
+                    console.log('No records yet for job:', jobId);
+                    return;
+                }
 
+                // Get latest status record
+                const latestStatus = statusRecords[0];
+                console.log('Latest status:', latestStatus);
+
+                // Update UI with progress info
+                updateJobProgress(latestStatus);
+
+                // Check if processing is complete
+                if (latestStatus.status === 'Completed' || latestStatus.status === 'completed' || latestStatus.status === 'Semantic Fix Completed') {
                     // Stop polling
                     stopPolling();
 
-                    // Display the result
-                    await displayResult(result);
-                } else if (response.status === 202) {
-                    // Still processing - continue polling
-                    console.log('Job still processing...');
-                } else {
-                    // Error
-                    console.error('Error polling for result:', response.status);
+                    // Fetch final result (if available)
+                    // For now just show completion status
+                    showCompletionStatus(latestStatus);
+                } else if (latestStatus.status && latestStatus.status.endsWith('Aborted')) {
+                    // Process aborted
+                    stopPolling();
+                    showErrorStatus(latestStatus.status, latestStatus.error_message);
+                } else if (latestStatus.status === 'Error' || latestStatus.status === 'error' || latestStatus.error_message) {
+                    stopPolling();
+                    showErrorStatus('Error', latestStatus.error_message || 'Processing error');
                 }
             } catch (error) {
                 console.error('Error polling for result:', error);
                 // Don't stop polling on network errors - might be temporary
+            }
+        }
+
+        function updateJobProgress(status) {
+            const jobStatusBadge = document.getElementById('jobStatusBadge');
+            const jobStatusText = document.getElementById('jobStatusText');
+
+            if (!jobStatusBadge) return;
+
+            const percentage = status.to_process > 0
+                ? Math.round((status.processed / status.to_process) * 100)
+                : 0;
+
+            // Determine icon and color based on status
+            let statusClass = '';
+            let statusIcon = '⏳';
+
+            const statusText = status.status || 'Processing';
+
+            if (statusText === 'Completed' || statusText === 'completed' || statusText === 'Semantic Fix Completed') {
+                statusIcon = '✅';
+                statusClass = 'connected';
+            } else if (statusText.includes('Aborted')) {
+                statusIcon = '⚠️';
+            } else if (statusText === 'Error' || statusText === 'error') {
+                statusIcon = '❌';
+            }
+
+            jobStatusBadge.className = `status-badge ${statusClass}`;
+            jobStatusBadge.style.display = 'inline-flex';
+            jobStatusBadge.style.gap = '0.5rem';
+            jobStatusBadge.innerHTML = `
+                ${statusClass ? '<span class="status-dot"></span>' : `<div class="spinner" style="width: 1rem; height: 1rem; border-width: 2px;"></div>`}
+                <span>${statusIcon} ${statusText}</span>
+            `;
+
+            // Update text with progress info
+            if (jobStatusText) {
+                jobStatusText.innerHTML = `Processing: ${status.processed || 0}/${status.to_process || 0} (${percentage}%)`;
+            }
+        }
+
+        function showCompletionStatus(status) {
+            const jobStatusBadge = document.getElementById('jobStatusBadge');
+            const jobStatusText = document.getElementById('jobStatusText');
+            const manualInputSection = document.getElementById('manualInputSection');
+
+            if (jobStatusBadge) {
+                jobStatusBadge.className = 'status-badge connected';
+                jobStatusBadge.style.display = 'inline-flex';
+                jobStatusBadge.innerHTML = `
+                    <span class="status-dot"></span>
+                    <span>✅ Completed</span>
+                `;
+            }
+
+            if (jobStatusText) {
+                const percentage = status.to_process > 0
+                    ? Math.round((status.processed / status.to_process) * 100)
+                    : 100;
+                jobStatusText.innerHTML = `Completed: ${status.processed || 0}/${status.to_process || 0} items (${percentage}%)`;
+            }
+
+            // Show manual input for JSON paste if no automatic retrieval
+            if (manualInputSection) {
+                manualInputSection.style.display = 'block';
+            }
+        }
+
+        function showErrorStatus(statusText, errorMessage) {
+            const jobStatusBadge = document.getElementById('jobStatusBadge');
+            const jobStatusText = document.getElementById('jobStatusText');
+
+            if (jobStatusBadge) {
+                jobStatusBadge.style.display = 'inline-flex';
+                jobStatusBadge.style.background = '#f8d7da';
+                jobStatusBadge.style.color = '#721c24';
+                jobStatusBadge.innerHTML = `
+                    <span>❌</span>
+                    <span>${statusText}</span>
+                `;
+            }
+
+            if (jobStatusText) {
+                jobStatusText.innerHTML = errorMessage || 'An error occurred during processing';
+                jobStatusText.style.color = '#721c24';
             }
         }
 
