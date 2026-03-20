@@ -1017,21 +1017,39 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="callbackUrl">Callback URL (Optional)</label>
-                    <input type="url" class="form-input" id="callbackUrl" placeholder="https://your-app.com/api/callback">
-                    <span class="form-hint">URL where n8n will send the processed JSON results. Leave empty to paste results manually.</span>
+                    <label class="form-label" for="callbackUrl">
+                        Extraction Callback URL
+                        <span style="color: var(--success); font-size: 0.875rem; font-weight: 400;">✓ Auto-configured</span>
+                    </label>
+                    <input type="url" class="form-input" id="callbackUrl" placeholder="Leave empty for auto: http://localhost:8000/api/callback">
+                    <span class="form-hint">
+                        <strong>Optional:</strong> Override automatic callback URL.
+                        Default: <code>http://localhost:8000/api/callback</code>
+                    </span>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="callbackToken">Callback Token (Optional)</label>
                     <input type="text" class="form-input" id="callbackToken" placeholder="your-secret-token">
-                    <span class="form-hint">Bearer token for authenticating callback requests</span>
+                    <span class="form-hint">Bearer token for authenticating callback requests (if required by n8n)</span>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="validationWebhookUrl">Validation Webhook URL</label>
                     <input type="url" class="form-input" id="validationWebhookUrl" placeholder="https://your-n8n.com/webhook/validation">
                     <span class="form-hint">The webhook endpoint where validated/edited JSON will be sent</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="validationCallbackUrl">
+                        Validation Callback URL
+                        <span style="color: var(--success); font-size: 0.875rem; font-weight: 400;">✓ Auto-configured</span>
+                    </label>
+                    <input type="url" class="form-input" id="validationCallbackUrl" placeholder="Leave empty for auto: http://localhost:8000/api/validation-callback">
+                    <span class="form-hint">
+                        <strong>Optional:</strong> Override automatic validation callback.
+                        Default: <code>http://localhost:8000/api/validation-callback</code>
+                    </span>
                 </div>
 
                 <div class="form-group">
@@ -1149,6 +1167,7 @@
             const callbackUrl = localStorage.getItem('callback_url');
             const callbackToken = localStorage.getItem('callback_token');
             const validationWebhookUrl = localStorage.getItem('validation_webhook_url');
+            const validationCallbackUrl = localStorage.getItem('validation_callback_url');
             const supabaseUrl = localStorage.getItem('supabase_url');
             const supabaseKey = localStorage.getItem('supabase_key');
             const lastPbsCode = localStorage.getItem('last_pbs_code');
@@ -1159,6 +1178,7 @@
             if (callbackUrl) document.getElementById('callbackUrl').value = callbackUrl;
             if (callbackToken) document.getElementById('callbackToken').value = callbackToken;
             if (validationWebhookUrl) document.getElementById('validationWebhookUrl').value = validationWebhookUrl;
+            if (validationCallbackUrl) document.getElementById('validationCallbackUrl').value = validationCallbackUrl;
             if (supabaseUrl) document.getElementById('supabaseUrl').value = supabaseUrl;
             if (supabaseKey) document.getElementById('supabaseKey').value = supabaseKey;
 
@@ -1178,6 +1198,7 @@
             const callbackUrl = document.getElementById('callbackUrl').value.trim();
             const callbackToken = document.getElementById('callbackToken').value.trim();
             const validationWebhookUrl = document.getElementById('validationWebhookUrl').value.trim();
+            const validationCallbackUrl = document.getElementById('validationCallbackUrl').value.trim();
             const supabaseUrl = document.getElementById('supabaseUrl').value.trim();
             const supabaseKey = document.getElementById('supabaseKey').value.trim();
 
@@ -1226,6 +1247,7 @@
             localStorage.setItem('callback_url', callbackUrl);
             localStorage.setItem('callback_token', callbackToken);
             localStorage.setItem('validation_webhook_url', validationWebhookUrl);
+            localStorage.setItem('validation_callback_url', validationCallbackUrl);
             localStorage.setItem('supabase_url', supabaseUrl);
             localStorage.setItem('supabase_key', supabaseKey);
 
@@ -1749,7 +1771,14 @@
             statusDiv.style.display = 'block';
 
             try {
-                const callbackUrl = localStorage.getItem('callback_url');
+                // Use configured callback URL or default to local server
+                let callbackUrl = localStorage.getItem('callback_url');
+                if (!callbackUrl || callbackUrl.trim() === '') {
+                    // Auto-configure local server callback
+                    callbackUrl = `${window.location.origin}/api/callback`;
+                    console.log('Using auto-configured callback URL:', callbackUrl);
+                }
+
                 const callbackToken = localStorage.getItem('callback_token');
 
                 const payload = {
@@ -1763,10 +1792,10 @@
                     timestamp: new Date().toISOString()
                 };
 
-                // Add callback URL and token if configured
-                if (callbackUrl) {
-                    payload.callbackUrl = callbackUrl;
-                }
+                // Always add callback URL (either configured or auto-configured)
+                payload.callbackUrl = callbackUrl;
+
+                // Add callback token if configured
                 if (callbackToken) {
                     payload.callbackToken = callbackToken;
                 }
@@ -1796,11 +1825,14 @@
                                 <div>File: ${APP.selectedFile.name}</div>
                                 <div>PBS Code: ${pbsCode}</div>
                                 <div>Job ID: ${result.jobId || 'N/A'}</div>
+                                <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                                    📡 Callback: ${callbackUrl}
+                                </div>
                             </div>
                         </div>
                     `;
 
-                    // Show results card with processing status
+                    // Show results card with processing status (always with callback URL now)
                     showJobProcessing(result.jobId, callbackUrl);
                 } else {
                     // Immediate response (200 OK)
@@ -2068,7 +2100,7 @@
             }
         }
 
-        function showCompletionStatus(status) {
+        async function showCompletionStatus(status) {
             const jobStatusBadge = document.getElementById('jobStatusBadge');
             const jobStatusText = document.getElementById('jobStatusText');
             const manualInputSection = document.getElementById('manualInputSection');
@@ -2089,10 +2121,60 @@
                 jobStatusText.innerHTML = `Completed: ${status.processed || 0}/${status.to_process || 0} items (${percentage}%)`;
             }
 
-            // Show manual input for JSON paste if no automatic retrieval
+            // Try to fetch result from local server
+            try {
+                console.log('Attempting to fetch result from local server...');
+                const result = await pollLocalServerForResult(APP.currentJobId);
+
+                if (result && result.status === 'ready') {
+                    console.log('Result found on local server:', result);
+                    await displayResult(result);
+                    return; // Result found and displayed
+                }
+            } catch (error) {
+                console.log('Could not fetch from local server:', error.message);
+            }
+
+            // Show manual input for JSON paste if automatic retrieval failed
             if (manualInputSection) {
                 manualInputSection.style.display = 'block';
             }
+        }
+
+        async function pollLocalServerForResult(jobId, maxAttempts = 10, delayMs = 2000) {
+            /**
+             * Polls the local server for results
+             * n8n might take a few seconds to send the callback after marking as completed
+             */
+            const serverUrl = window.location.origin; // e.g., http://localhost:8000
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    console.log(`Polling local server (attempt ${attempt}/${maxAttempts})...`);
+
+                    const response = await fetch(`${serverUrl}/api/result/${jobId}`);
+                    const data = await response.json();
+
+                    if (response.status === 200 && data.status === 'ready') {
+                        console.log('✅ Result received from local server');
+                        return data;
+                    }
+
+                    // Wait before next attempt
+                    if (attempt < maxAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, delayMs));
+                    }
+                } catch (error) {
+                    console.error(`Error polling local server (attempt ${attempt}):`, error);
+
+                    // If server is not running, fail fast
+                    if (error.message.includes('Failed to fetch')) {
+                        throw new Error('Local server not accessible. Make sure server.py is running.');
+                    }
+                }
+            }
+
+            throw new Error('Result not found after maximum polling attempts');
         }
 
         function showErrorStatus(statusText, errorMessage) {
@@ -2276,9 +2358,18 @@
                     page: proc.page
                 }));
 
+                // Use configured validation callback URL or default to local server
+                let validationCallbackUrl = localStorage.getItem('validation_callback_url');
+                if (!validationCallbackUrl || validationCallbackUrl.trim() === '') {
+                    validationCallbackUrl = `${window.location.origin}/api/validation-callback`;
+                    console.log('Using auto-configured validation callback URL:', validationCallbackUrl);
+                }
+
                 const jsonData = {
                     procedures: proceduresWithPage,
-                    file_name: APP.originalJsonData?.file_name || APP.originalJsonData?.fileName || ''
+                    file_name: APP.originalJsonData?.file_name || APP.originalJsonData?.fileName || '',
+                    jobId: APP.currentJobId || APP.originalJsonData?.jobId || '',
+                    callbackUrl: validationCallbackUrl
                 };
 
                 // Send to validation webhook
