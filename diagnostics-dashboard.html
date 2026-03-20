@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Diagnostics Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .config-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .config-section label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .config-section input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .stat-card.error {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+        }
+
+        .stat-card.ongoing {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .stat-card h3 {
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: #f8f9fa;
+            position: sticky;
+            top: 0;
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-ongoing {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-aborted {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .progress-bar {
+            width: 100px;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .auto-refresh input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .timestamp {
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 RAG Diagnostics Dashboard</h1>
+        <p class="subtitle">Monitor dei workflow n8n in tempo reale</p>
+
+        <!-- Configurazione -->
+        <div class="config-section" id="configSection">
+            <label for="supabaseUrl">Supabase URL</label>
+            <input type="text" id="supabaseUrl" placeholder="https://xxx.supabase.co" value="https://tpsywkjczdtmdhpjqmyi.supabase.co">
+
+            <label for="supabaseKey">Supabase Anon Key</label>
+            <input type="password" id="supabaseKey" placeholder="Inserisci la chiave">
+
+            <button class="btn" onclick="saveConfig()">💾 Salva e Connetti</button>
+        </div>
+
+        <!-- Dashboard (nascosto finché non si connette) -->
+        <div id="dashboard" style="display: none;">
+            <!-- Auto-refresh -->
+            <div class="auto-refresh">
+                <input type="checkbox" id="autoRefresh" checked>
+                <label for="autoRefresh">Auto-refresh ogni 5 secondi</label>
+                <span style="margin-left: auto; color: #666; font-size: 12px;" id="lastUpdate"></span>
+            </div>
+
+            <!-- Statistiche -->
+            <div class="stats" id="stats"></div>
+
+            <!-- Filtri -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Stato</label>
+                    <select id="filterStatus" onchange="loadData()">
+                        <option value="">Tutti</option>
+                        <option value="Ongoing">In corso</option>
+                        <option value="Completed">Completati</option>
+                        <option value="Error">Errori</option>
+                        <option value="Aborted">Abortiti</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Job ID</label>
+                    <input type="text" id="filterJobId" placeholder="Cerca per job_id" onkeyup="loadData()">
+                </div>
+                <div class="filter-group">
+                    <label>Limite</label>
+                    <select id="filterLimit" onchange="loadData()">
+                        <option value="10">10 record</option>
+                        <option value="50" selected>50 record</option>
+                        <option value="100">100 record</option>
+                        <option value="500">500 record</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button class="btn" onclick="loadData()">🔄 Aggiorna</button>
+                </div>
+            </div>
+
+            <!-- Tabella -->
+            <div class="table-container">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Job ID</th>
+                            <th>Stato</th>
+                            <th>Workflow</th>
+                            <th>Fase</th>
+                            <th>File</th>
+                            <th>Progresso</th>
+                            <th>Errore</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="8" class="loading">Caricamento dati</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let supabaseUrl = '';
+        let supabaseKey = '';
+        let refreshInterval = null;
+
+        // Carica config salvata
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUrl = localStorage.getItem('dashboard_supabase_url');
+            const savedKey = localStorage.getItem('dashboard_supabase_key');
+
+            if (savedUrl && savedKey) {
+                document.getElementById('supabaseUrl').value = savedUrl;
+                document.getElementById('supabaseKey').value = savedKey;
+                saveConfig();
+            }
+        });
+
+        function saveConfig() {
+            supabaseUrl = document.getElementById('supabaseUrl').value.trim();
+            supabaseKey = document.getElementById('supabaseKey').value.trim();
+
+            if (!supabaseUrl || !supabaseKey) {
+                alert('Inserisci URL e Key di Supabase');
+                return;
+            }
+
+            localStorage.setItem('dashboard_supabase_url', supabaseUrl);
+            localStorage.setItem('dashboard_supabase_key', supabaseKey);
+
+            document.getElementById('configSection').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+
+            loadData();
+            startAutoRefresh();
+        }
+
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+
+            refreshInterval = setInterval(() => {
+                if (document.getElementById('autoRefresh').checked) {
+                    loadData();
+                }
+            }, 5000);
+        }
+
+        async function loadData() {
+            const filterStatus = document.getElementById('filterStatus').value;
+            const filterJobId = document.getElementById('filterJobId').value.trim();
+            const limit = document.getElementById('filterLimit').value;
+
+            let url = `${supabaseUrl}/rest/v1/rag_diagnostics?order=timestamp.desc&limit=${limit}`;
+
+            if (filterStatus) {
+                if (filterStatus === 'Aborted') {
+                    url += `&status=like.*Aborted*`;
+                } else {
+                    url += `&status=eq.${filterStatus}`;
+                }
+            }
+
+            if (filterJobId) {
+                url += `&job_id=eq.${filterJobId}`;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                renderTable(data);
+                updateStats(data);
+                document.getElementById('lastUpdate').textContent = `Ultimo aggiornamento: ${new Date().toLocaleTimeString('it-IT')}`;
+            } catch (error) {
+                document.getElementById('tableBody').innerHTML = `
+                    <tr><td colspan="8" style="color: red;">Errore: ${error.message}</td></tr>
+                `;
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #666;">Nessun record trovato</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(record => {
+                const percentage = record.to_process > 0
+                    ? Math.round((record.processed / record.to_process) * 100)
+                    : 0;
+
+                let statusClass = 'status-ongoing';
+                if (record.status === 'Completed' || record.status === 'Semantic Fix Completed') {
+                    statusClass = 'status-completed';
+                } else if (record.status === 'Error' || record.error_message) {
+                    statusClass = 'status-error';
+                } else if (record.status && record.status.includes('Aborted')) {
+                    statusClass = 'status-aborted';
+                }
+
+                return `
+                    <tr>
+                        <td class="timestamp">${new Date(record.timestamp).toLocaleString('it-IT')}</td>
+                        <td style="font-family: monospace; font-size: 12px;">${record.job_id || '-'}</td>
+                        <td><span class="status-badge ${statusClass}">${record.status || '-'}</span></td>
+                        <td>${record.workflow_name || '-'}</td>
+                        <td>${record.node_name || '-'}</td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${record.input_file || '-'}</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${percentage}%"></div>
+                                <div class="progress-text">${record.processed}/${record.to_process}</div>
+                            </div>
+                        </td>
+                        <td style="color: #d63031; font-size: 12px; max-width: 200px;">${record.error_message || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function updateStats(currentData) {
+            // Fetch tutti i dati per statistiche accurate
+            const response = await fetch(`${supabaseUrl}/rest/v1/rag_diagnostics`, {
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`
+                }
+            });
+            const allData = await response.json();
+
+            const stats = {
+                total: allData.length,
+                ongoing: allData.filter(r => r.status === 'Ongoing' || (r.status && r.status.includes('Started'))).length,
+                completed: allData.filter(r => r.status === 'Completed' || r.status === 'Semantic Fix Completed').length,
+                errors: allData.filter(r => r.status === 'Error' || r.error_message).length
+            };
+
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-card">
+                    <h3>${stats.total}</h3>
+                    <p>Totale Record</p>
+                </div>
+                <div class="stat-card ongoing">
+                    <h3>${stats.ongoing}</h3>
+                    <p>In Corso</p>
+                </div>
+                <div class="stat-card success">
+                    <h3>${stats.completed}</h3>
+                    <p>Completati</p>
+                </div>
+                <div class="stat-card error">
+                    <h3>${stats.errors}</h3>
+                    <p>Errori</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
