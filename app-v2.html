@@ -1021,10 +1021,10 @@
                         Extraction Callback URL
                         <span style="color: var(--success); font-size: 0.875rem; font-weight: 400;">✓ Auto-configured</span>
                     </label>
-                    <input type="url" class="form-input" id="callbackUrl" placeholder="Leave empty for auto: http://localhost:8000/api/callback">
+                    <input type="url" class="form-input" id="callbackUrl" placeholder="">
                     <span class="form-hint">
                         <strong>Optional:</strong> Override automatic callback URL.
-                        Default: <code>http://localhost:8000/api/callback</code>
+                        Auto-configured to: <code id="autoCallbackUrl"></code>
                     </span>
                 </div>
 
@@ -1045,10 +1045,10 @@
                         Validation Callback URL
                         <span style="color: var(--success); font-size: 0.875rem; font-weight: 400;">✓ Auto-configured</span>
                     </label>
-                    <input type="url" class="form-input" id="validationCallbackUrl" placeholder="Leave empty for auto: http://localhost:8000/api/validation-callback">
+                    <input type="url" class="form-input" id="validationCallbackUrl" placeholder="">
                     <span class="form-hint">
                         <strong>Optional:</strong> Override automatic validation callback.
-                        Default: <code>http://localhost:8000/api/validation-callback</code>
+                        Auto-configured to: <code id="autoValidationCallbackUrl"></code>
                     </span>
                 </div>
 
@@ -1181,6 +1181,17 @@
             if (validationCallbackUrl) document.getElementById('validationCallbackUrl').value = validationCallbackUrl;
             if (supabaseUrl) document.getElementById('supabaseUrl').value = supabaseUrl;
             if (supabaseKey) document.getElementById('supabaseKey').value = supabaseKey;
+
+            // Show auto-configured callback URLs (works for both localhost and Railway!)
+            const autoCallbackUrlElem = document.getElementById('autoCallbackUrl');
+            const autoValidationCallbackUrlElem = document.getElementById('autoValidationCallbackUrl');
+
+            if (autoCallbackUrlElem) {
+                autoCallbackUrlElem.textContent = `${window.location.origin}/api/callback`;
+            }
+            if (autoValidationCallbackUrlElem) {
+                autoValidationCallbackUrlElem.textContent = `${window.location.origin}/api/validation-callback`;
+            }
 
             // Load last PBS code if available
             const pbsCodeInput = document.getElementById('pbsCode');
