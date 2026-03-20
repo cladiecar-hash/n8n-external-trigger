@@ -29,13 +29,15 @@ function loadStoredConfig() {
     const clientId = localStorage.getItem('google_client_id');
     const apiKey = localStorage.getItem('google_api_key');
     const webhookUrl = localStorage.getItem('webhook_url');
+    const templateWebhookUrl = localStorage.getItem('template_webhook_url');
     const supabaseUrl = localStorage.getItem('supabase_url');
     const supabaseKey = localStorage.getItem('supabase_key');
 
-    if (clientId && apiKey && webhookUrl && supabaseUrl && supabaseKey) {
+    if (clientId && apiKey && webhookUrl && templateWebhookUrl && supabaseUrl && supabaseKey) {
         document.getElementById('clientId').value = clientId;
         document.getElementById('apiKey').value = apiKey;
         document.getElementById('webhookUrl').value = webhookUrl;
+        document.getElementById('templateWebhookUrl').value = templateWebhookUrl;
         document.getElementById('supabaseUrl').value = supabaseUrl;
         document.getElementById('supabaseKey').value = supabaseKey;
 
@@ -47,6 +49,7 @@ function loadStoredConfig() {
         document.getElementById('clientId').disabled = true;
         document.getElementById('apiKey').disabled = true;
         document.getElementById('webhookUrl').disabled = true;
+        document.getElementById('templateWebhookUrl').disabled = true;
         document.getElementById('supabaseUrl').disabled = true;
         document.getElementById('supabaseKey').disabled = true;
 
@@ -58,10 +61,11 @@ function saveConfig() {
     const clientId = document.getElementById('clientId').value.trim();
     const apiKey = document.getElementById('apiKey').value.trim();
     const webhookUrl = document.getElementById('webhookUrl').value.trim();
+    const templateWebhookUrl = document.getElementById('templateWebhookUrl').value.trim();
     const supabaseUrl = document.getElementById('supabaseUrl').value.trim();
     const supabaseKey = document.getElementById('supabaseKey').value.trim();
 
-    if (!clientId || !apiKey || !webhookUrl || !supabaseUrl || !supabaseKey) {
+    if (!clientId || !apiKey || !webhookUrl || !templateWebhookUrl || !supabaseUrl || !supabaseKey) {
         alert('Compila tutti i campi della configurazione');
         return;
     }
@@ -69,6 +73,7 @@ function saveConfig() {
     // Validazione URL webhook
     try {
         new URL(webhookUrl);
+        new URL(templateWebhookUrl);
         new URL(supabaseUrl);
     } catch {
         alert('URL webhook o Supabase non valido');
@@ -78,6 +83,7 @@ function saveConfig() {
     localStorage.setItem('google_client_id', clientId);
     localStorage.setItem('google_api_key', apiKey);
     localStorage.setItem('webhook_url', webhookUrl);
+    localStorage.setItem('template_webhook_url', templateWebhookUrl);
     localStorage.setItem('supabase_url', supabaseUrl);
     localStorage.setItem('supabase_key', supabaseKey);
 
@@ -89,6 +95,7 @@ function saveConfig() {
     document.getElementById('clientId').disabled = true;
     document.getElementById('apiKey').disabled = true;
     document.getElementById('webhookUrl').disabled = true;
+    document.getElementById('templateWebhookUrl').disabled = true;
     document.getElementById('supabaseUrl').disabled = true;
     document.getElementById('supabaseKey').disabled = true;
 
