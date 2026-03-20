@@ -19,7 +19,7 @@ callback_results = {}
 # Serve static files
 @app.route('/')
 def index():
-    return send_from_directory('.', 'app-v2.html')
+    return send_from_directory('.', 'index.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
