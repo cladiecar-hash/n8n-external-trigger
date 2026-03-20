@@ -867,6 +867,36 @@
                     </div>
                 </div>
 
+                <!-- Progress Section -->
+                <div id="progressInfo" style="display: none; margin-bottom: 1rem;">
+                    <div style="padding: 1.5rem; background: var(--bg-secondary); border-radius: 0.5rem; border: 2px solid var(--border);">
+                        <!-- Stats Row -->
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; gap: 1rem;">
+                            <div style="flex: 1; text-align: center; padding: 0.75rem; background: white; border-radius: 0.5rem; box-shadow: var(--shadow-sm);">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px;">Processed</div>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);" id="processedCount">0</div>
+                            </div>
+                            <div style="flex: 1; text-align: center; padding: 0.75rem; background: white; border-radius: 0.5rem; box-shadow: var(--shadow-sm);">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px;">To Process</div>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);" id="toProcessCount">0</div>
+                            </div>
+                            <div style="flex: 1; text-align: center; padding: 0.75rem; background: white; border-radius: 0.5rem; box-shadow: var(--shadow-sm);">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px;">Progress</div>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);" id="percentageDisplay">0%</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div style="margin-top: 1rem;">
+                            <div style="background: #e2e8f0; border-radius: 9999px; height: 1.5rem; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                                <div id="progressBar" style="background: linear-gradient(90deg, var(--success) 0%, var(--success-light) 100%); height: 100%; width: 0%; transition: width 0.5s ease-out; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+                                    <span id="progressBarText">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="manualInputSection" style="display: none; margin-bottom: 1rem;">
                     <div class="alert alert-info">
                         <span class="alert-icon">ℹ️</span>
@@ -1844,6 +1874,7 @@
             const jobStatusText = document.getElementById('jobStatusText');
             const jobInfo = document.getElementById('jobInfo');
             const jobIdDisplay = document.getElementById('jobIdDisplay');
+            const progressInfo = document.getElementById('progressInfo');
             const manualInputSection = document.getElementById('manualInputSection');
 
             // Show results card
@@ -1863,6 +1894,16 @@
             // Show job ID
             jobInfo.style.display = 'block';
             jobIdDisplay.textContent = jobId || 'N/A';
+
+            // Show progress section with initial values
+            if (progressInfo) {
+                progressInfo.style.display = 'block';
+                document.getElementById('processedCount').textContent = '0';
+                document.getElementById('toProcessCount').textContent = '0';
+                document.getElementById('percentageDisplay').textContent = '0%';
+                document.getElementById('progressBar').style.width = '0%';
+                document.getElementById('progressBarText').textContent = '0%';
+            }
 
             // Show manual input if no callback URL
             if (!callbackUrl) {
@@ -1969,8 +2010,10 @@
 
             if (!jobStatusBadge) return;
 
-            const percentage = status.to_process > 0
-                ? Math.round((status.processed / status.to_process) * 100)
+            const processed = status.processed || 0;
+            const toProcess = status.to_process || 0;
+            const percentage = toProcess > 0
+                ? Math.round((processed / toProcess) * 100)
                 : 0;
 
             // Determine icon and color based on status
@@ -1996,9 +2039,32 @@
                 <span>${statusIcon} ${statusText}</span>
             `;
 
-            // Update text with progress info
-            if (jobStatusText) {
-                jobStatusText.innerHTML = `Processing: ${status.processed || 0}/${status.to_process || 0} (${percentage}%)`;
+            // Update progress info section
+            const progressInfo = document.getElementById('progressInfo');
+            if (progressInfo) {
+                progressInfo.style.display = 'block';
+
+                // Update counts
+                document.getElementById('processedCount').textContent = processed;
+                document.getElementById('toProcessCount').textContent = toProcess;
+                document.getElementById('percentageDisplay').textContent = percentage + '%';
+
+                // Update progress bar
+                const progressBar = document.getElementById('progressBar');
+                const progressBarText = document.getElementById('progressBarText');
+                if (progressBar) {
+                    progressBar.style.width = percentage + '%';
+                    progressBarText.textContent = percentage + '%';
+
+                    // Change color based on progress
+                    if (percentage === 100) {
+                        progressBar.style.background = 'linear-gradient(90deg, var(--success) 0%, var(--success-dark) 100%)';
+                    } else if (percentage >= 75) {
+                        progressBar.style.background = 'linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%)';
+                    } else {
+                        progressBar.style.background = 'linear-gradient(90deg, var(--success) 0%, var(--success-light) 100%)';
+                    }
+                }
             }
         }
 
@@ -2422,6 +2488,7 @@
                 // Hide and clear all result sections
                 document.getElementById('resultsCard').style.display = 'none';
                 document.getElementById('jobInfo').style.display = 'none';
+                document.getElementById('progressInfo').style.display = 'none';
                 document.getElementById('manualInputSection').style.display = 'none';
                 document.getElementById('jsonResultSection').style.display = 'none';
 
