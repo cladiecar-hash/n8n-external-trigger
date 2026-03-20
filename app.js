@@ -29,11 +29,15 @@ function loadStoredConfig() {
     const clientId = localStorage.getItem('google_client_id');
     const apiKey = localStorage.getItem('google_api_key');
     const webhookUrl = localStorage.getItem('webhook_url');
+    const supabaseUrl = localStorage.getItem('supabase_url');
+    const supabaseKey = localStorage.getItem('supabase_key');
 
-    if (clientId && apiKey && webhookUrl) {
+    if (clientId && apiKey && webhookUrl && supabaseUrl && supabaseKey) {
         document.getElementById('clientId').value = clientId;
         document.getElementById('apiKey').value = apiKey;
         document.getElementById('webhookUrl').value = webhookUrl;
+        document.getElementById('supabaseUrl').value = supabaseUrl;
+        document.getElementById('supabaseKey').value = supabaseKey;
 
         document.getElementById('saveConfig').style.display = 'none';
         document.getElementById('editConfig').style.display = 'inline-block';
@@ -43,6 +47,8 @@ function loadStoredConfig() {
         document.getElementById('clientId').disabled = true;
         document.getElementById('apiKey').disabled = true;
         document.getElementById('webhookUrl').disabled = true;
+        document.getElementById('supabaseUrl').disabled = true;
+        document.getElementById('supabaseKey').disabled = true;
 
         showMessage('Configurazione caricata dal browser', 'info', 'authStatus');
     }
@@ -52,8 +58,10 @@ function saveConfig() {
     const clientId = document.getElementById('clientId').value.trim();
     const apiKey = document.getElementById('apiKey').value.trim();
     const webhookUrl = document.getElementById('webhookUrl').value.trim();
+    const supabaseUrl = document.getElementById('supabaseUrl').value.trim();
+    const supabaseKey = document.getElementById('supabaseKey').value.trim();
 
-    if (!clientId || !apiKey || !webhookUrl) {
+    if (!clientId || !apiKey || !webhookUrl || !supabaseUrl || !supabaseKey) {
         alert('Compila tutti i campi della configurazione');
         return;
     }
@@ -61,14 +69,17 @@ function saveConfig() {
     // Validazione URL webhook
     try {
         new URL(webhookUrl);
+        new URL(supabaseUrl);
     } catch {
-        alert('URL webhook non valido');
+        alert('URL webhook o Supabase non valido');
         return;
     }
 
     localStorage.setItem('google_client_id', clientId);
     localStorage.setItem('google_api_key', apiKey);
     localStorage.setItem('webhook_url', webhookUrl);
+    localStorage.setItem('supabase_url', supabaseUrl);
+    localStorage.setItem('supabase_key', supabaseKey);
 
     document.getElementById('saveConfig').style.display = 'none';
     document.getElementById('editConfig').style.display = 'inline-block';
@@ -78,6 +89,8 @@ function saveConfig() {
     document.getElementById('clientId').disabled = true;
     document.getElementById('apiKey').disabled = true;
     document.getElementById('webhookUrl').disabled = true;
+    document.getElementById('supabaseUrl').disabled = true;
+    document.getElementById('supabaseKey').disabled = true;
 
     showMessage('Configurazione salvata con successo!', 'success', 'authStatus');
 
@@ -92,6 +105,8 @@ function editConfig() {
     document.getElementById('clientId').disabled = false;
     document.getElementById('apiKey').disabled = false;
     document.getElementById('webhookUrl').disabled = false;
+    document.getElementById('supabaseUrl').disabled = false;
+    document.getElementById('supabaseKey').disabled = false;
 
     document.getElementById('saveConfig').style.display = 'inline-block';
     document.getElementById('editConfig').style.display = 'none';
@@ -327,6 +342,86 @@ function clearFileSelection() {
     updateSendButton();
 }
 
+// ============= SUPABASE DIAGNOSTICS =============
+
+async function checkJobStatus(jobId) {
+    const supabaseUrl = localStorage.getItem('supabase_url');
+    const supabaseKey = localStorage.getItem('supabase_key');
+
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configurazione Supabase mancante');
+    }
+
+    const response = await fetch(`${supabaseUrl}/rest/v1/rag_diagnostics?job_id=eq.${jobId}&order=timestamp.desc`, {
+        headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error(`Errore Supabase: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+}
+
+async function pollJobStatus(jobId, updateCallback) {
+    const maxAttempts = 600; // 10 minuti (600 * 1 secondo)
+    let attempts = 0;
+    let pollingInterval;
+
+    return new Promise((resolve, reject) => {
+        pollingInterval = setInterval(async () => {
+            try {
+                attempts++;
+
+                const statusRecords = await checkJobStatus(jobId);
+
+                if (!statusRecords || statusRecords.length === 0) {
+                    if (attempts > 5) {
+                        // Se dopo 5 tentativi non ci sono record, probabilmente c'è un problema
+                        clearInterval(pollingInterval);
+                        reject(new Error('Nessun record trovato per questo job'));
+                    }
+                    return;
+                }
+
+                // Prendi il record più recente
+                const latestStatus = statusRecords[0];
+
+                // Chiama la callback con l'aggiornamento
+                updateCallback(latestStatus);
+
+                // Controlla se il processo è completato o ha un errore
+                if (latestStatus.status === 'Completed' || latestStatus.status === 'completed') {
+                    clearInterval(pollingInterval);
+                    resolve(latestStatus);
+                } else if (latestStatus.status === 'Error' || latestStatus.status === 'error' || latestStatus.error_message) {
+                    clearInterval(pollingInterval);
+                    reject(new Error(latestStatus.error_message || 'Errore nel processo'));
+                }
+
+                // Timeout dopo maxAttempts
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollingInterval);
+                    reject(new Error('Timeout: processo non completato entro 10 minuti'));
+                }
+
+            } catch (error) {
+                console.error('Errore durante il polling:', error);
+                // Non interrompiamo subito, potrebbe essere un errore temporaneo
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollingInterval);
+                    reject(error);
+                }
+            }
+        }, 1000); // Polling ogni secondo
+    });
+}
+
 // ============= INVIO A WEBHOOK N8N =============
 
 async function sendToWebhook() {
@@ -353,7 +448,7 @@ async function sendToWebhook() {
     document.getElementById('sendBtn').disabled = true;
     sendStatus.style.display = 'block';
     sendStatus.className = 'status-box';
-    sendStatus.innerHTML = '<div class="loading">Invio al webhook n8n</div>';
+    sendStatus.innerHTML = '<div class="loading">📤 Invio al webhook n8n...</div>';
 
     try {
         // Prepara i dati da inviare (File ID, PBS Code e metadata utili)
@@ -383,19 +478,73 @@ async function sendToWebhook() {
 
         const result = await webhookResponse.json().catch(() => ({}));
 
-        sendStatus.className = 'status-box success';
-        sendStatus.innerHTML = `
-            <h3>✓ Invio Completato!</h3>
-            <p><strong>File ID:</strong> ${selectedFile.id}</p>
-            <p><strong>Nome File:</strong> ${selectedFile.name}</p>
-            <p><strong>Codice PBS:</strong> ${pbsCode}</p>
-            <p><strong>Timestamp:</strong> ${new Date().toLocaleString('it-IT')}</p>
-            ${result.message ? `<p><strong>Risposta:</strong> ${result.message}</p>` : ''}
-        `;
+        // Se il webhook restituisce un job_id, avvia il monitoraggio
+        if (result.job_id || result.jobId) {
+            const jobId = result.job_id || result.jobId;
 
-        // Reset form
-        document.getElementById('pbsCode').value = '';
-        clearFileSelection();
+            sendStatus.innerHTML = `
+                <h3>⏳ Elaborazione in corso...</h3>
+                <p><strong>Job ID:</strong> ${jobId}</p>
+                <p><strong>File:</strong> ${selectedFile.name}</p>
+                <p><strong>PBS:</strong> ${pbsCode}</p>
+                <div id="progressInfo" style="margin-top: 15px;">
+                    <div class="loading">Attendere elaborazione...</div>
+                </div>
+            `;
+
+            // Avvia il polling dello stato
+            try {
+                const finalStatus = await pollJobStatus(jobId, (status) => {
+                    // Callback chiamata ad ogni aggiornamento
+                    updateProgressUI(status);
+                });
+
+                // Processo completato con successo
+                sendStatus.className = 'status-box success';
+                sendStatus.innerHTML = `
+                    <h3>✓ Elaborazione Completata!</h3>
+                    <p><strong>Job ID:</strong> ${jobId}</p>
+                    <p><strong>File:</strong> ${selectedFile.name}</p>
+                    <p><strong>PBS:</strong> ${pbsCode}</p>
+                    <p><strong>Processati:</strong> ${finalStatus.processed}/${finalStatus.to_process}</p>
+                    <p><strong>Completato:</strong> ${new Date(finalStatus.timestamp).toLocaleString('it-IT')}</p>
+                `;
+
+                // Reset form dopo successo
+                setTimeout(() => {
+                    document.getElementById('pbsCode').value = '';
+                    clearFileSelection();
+                }, 3000);
+
+            } catch (pollError) {
+                // Errore durante il polling o nel processo
+                sendStatus.className = 'status-box error';
+                sendStatus.innerHTML = `
+                    <h3>✗ Errore durante l'elaborazione</h3>
+                    <p><strong>Job ID:</strong> ${jobId}</p>
+                    <p><strong>Errore:</strong> ${pollError.message}</p>
+                `;
+            }
+
+        } else {
+            // Vecchio comportamento: webhook non restituisce job_id
+            sendStatus.className = 'status-box success';
+            sendStatus.innerHTML = `
+                <h3>✓ Invio Completato!</h3>
+                <p><strong>File ID:</strong> ${selectedFile.id}</p>
+                <p><strong>Nome File:</strong> ${selectedFile.name}</p>
+                <p><strong>Codice PBS:</strong> ${pbsCode}</p>
+                <p><strong>Timestamp:</strong> ${new Date().toLocaleString('it-IT')}</p>
+                ${result.message ? `<p><strong>Risposta:</strong> ${result.message}</p>` : ''}
+                <p style="color: orange;"><small>⚠️ Job ID non restituito: monitoraggio non disponibile</small></p>
+            `;
+
+            // Reset form
+            setTimeout(() => {
+                document.getElementById('pbsCode').value = '';
+                clearFileSelection();
+            }, 3000);
+        }
 
     } catch (error) {
         console.error('Errore nell\'invio:', error);
@@ -408,6 +557,38 @@ async function sendToWebhook() {
     } finally {
         document.getElementById('sendBtn').disabled = false;
     }
+}
+
+function updateProgressUI(status) {
+    const progressInfo = document.getElementById('progressInfo');
+    if (!progressInfo) return;
+
+    const percentage = status.to_process > 0
+        ? Math.round((status.processed / status.to_process) * 100)
+        : 0;
+
+    let statusIcon = '⏳';
+    let statusText = status.status || 'Ongoing';
+
+    if (status.status === 'Completed' || status.status === 'completed') {
+        statusIcon = '✓';
+    } else if (status.status === 'Error' || status.status === 'error') {
+        statusIcon = '✗';
+    }
+
+    progressInfo.innerHTML = `
+        <div style="background: #f0f0f0; padding: 15px; border-radius: 8px;">
+            <p><strong>Stato:</strong> ${statusIcon} ${statusText}</p>
+            <p><strong>Progresso:</strong> ${status.processed} / ${status.to_process} (${percentage}%)</p>
+            <div style="background: #ddd; height: 20px; border-radius: 10px; overflow: hidden; margin: 10px 0;">
+                <div style="background: #4CAF50; height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>
+            </div>
+            ${status.workflow_name ? `<p><small><strong>Workflow:</strong> ${status.workflow_name}</small></p>` : ''}
+            ${status.node_name ? `<p><small><strong>Nodo:</strong> ${status.node_name}</small></p>` : ''}
+            ${status.error_message ? `<p style="color: red;"><strong>Errore:</strong> ${status.error_message}</p>` : ''}
+            <p><small>Ultimo aggiornamento: ${new Date(status.timestamp).toLocaleTimeString('it-IT')}</small></p>
+        </div>
+    `;
 }
 
 // ============= UTILITY FUNCTIONS =============
