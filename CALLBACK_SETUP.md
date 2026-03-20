@@ -4,27 +4,34 @@ This guide explains how to configure n8n workflows to send callbacks to the loca
 
 ## 🚀 Quick Start
 
-### 1. Start the Local Server
+### 1. Deploy or Run Locally
 
+**Option A - Production (Railway/Heroku/etc):**
+The server is already deployed. Just open your app URL.
+
+**Option B - Local Development:**
 ```bash
 python server.py
 ```
-
-The server will start on `http://localhost:8000` with these endpoints:
-
-- **Extraction Callback**: `http://localhost:8000/api/callback`
-- **Validation Callback**: `http://localhost:8000/api/validation-callback`
-- **Results Polling**: `http://localhost:8000/api/result/<job_id>`
+The server will start on `http://localhost:8000`
 
 ### 2. Configure the Web App
 
-Open the app at `http://localhost:8000` and go to **Settings**.
+Open the app (either production URL or `http://localhost:8000`) and go to **Settings**.
 
-The callback URLs are **auto-configured** by default:
-- ✅ Extraction Callback: Automatically set to `http://localhost:8000/api/callback`
-- ✅ Validation Callback: Automatically set to `http://localhost:8000/api/validation-callback`
+The callback URLs are **auto-configured** based on where you're accessing the app:
 
-You can override these if needed (e.g., for production deployments).
+📍 **If you open**: `http://localhost:8000`
+- ✅ Extraction Callback: `http://localhost:8000/api/callback`
+- ✅ Validation Callback: `http://localhost:8000/api/validation-callback`
+
+📍 **If you open**: `https://your-app.railway.app`
+- ✅ Extraction Callback: `https://your-app.railway.app/api/callback`
+- ✅ Validation Callback: `https://your-app.railway.app/api/validation-callback`
+
+**The app automatically detects its URL** using `window.location.origin` - no manual configuration needed!
+
+You can override these in Settings if needed for specific use cases.
 
 ## 📤 n8n Workflow Configuration
 
@@ -108,25 +115,37 @@ sequenceDiagram
 
 ## 🛠️ Production Deployment
 
-For production, you'll need a **publicly accessible callback URL**.
+### ✅ If you already deployed to Railway/Heroku/etc:
 
-### Options:
+**YOU'RE DONE!** No additional configuration needed. The app auto-configures based on its URL.
 
-1. **Deploy server.py** to a cloud platform (Heroku, Railway, AWS, etc.)
-2. **Use ngrok** for local development:
-   ```bash
-   ngrok http 8000
-   ```
-   Then update the callback URLs in settings with the ngrok URL.
+Just make sure:
+1. You access the app via the production URL (e.g., `https://your-app.railway.app`)
+2. The app will automatically use production URLs for callbacks
+3. n8n can reach your server (it's publicly accessible)
 
-3. **Use Supabase Functions** or similar serverless endpoints
+### 🏠 Local Development with ngrok (if n8n needs to reach localhost):
 
-### Update Settings:
+If you're testing locally but n8n is in the cloud:
 
+```bash
+ngrok http 8000
 ```
-Extraction Callback URL: https://your-domain.com/api/callback
-Validation Callback URL: https://your-domain.com/api/validation-callback
+
+Then **manually override** the callback URLs in Settings:
 ```
+Extraction Callback URL: https://abc123.ngrok.io/api/callback
+Validation Callback URL: https://abc123.ngrok.io/api/validation-callback
+```
+
+### 🚀 First-time Deployment:
+
+Deploy `server.py` to any cloud platform:
+1. **Railway/Heroku**: Just push the code, add `requirements.txt`
+2. **AWS/GCP**: Use any compute service
+3. **Supabase Functions**: Adapt the Flask routes to Edge Functions
+
+The auto-configuration will handle the rest!
 
 ## 🔐 Security
 
