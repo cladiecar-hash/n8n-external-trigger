@@ -599,6 +599,26 @@
             box-shadow: 0 4px 8px -2px rgb(239 68 68 / 0.3);
         }
 
+        .btn-add {
+            background: var(--success);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 2px 4px -1px rgb(16 185 129 / 0.2);
+            margin-right: 0.5rem;
+        }
+
+        .btn-add:hover {
+            background: var(--success-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px -2px rgb(16 185 129 / 0.3);
+        }
+
         .procedure-field {
             margin-bottom: 1rem;
         }
@@ -744,6 +764,54 @@
                         Go to Settings
                     </button>
                 </div>
+            </div>
+
+            <!-- Quick Validation Card -->
+            <div class="card" id="quickValidationCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span class="icon">⚡</span>
+                        Quick Validation
+                    </h2>
+                </div>
+                <div class="alert alert-info">
+                    <span class="alert-icon">💡</span>
+                    <div class="alert-content">
+                        <div class="alert-title">Skip to Manual Validation</div>
+                        <div>Already have a *_Final.json file? Load it here with a PBS Code to jump directly to the validation step.</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="quickValidationPbsCode">PBS Code</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        id="quickValidationPbsCode"
+                        placeholder="Enter PBS Code (e.g., 29370)"
+                        pattern="[0-9]*"
+                        inputmode="numeric"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="quickValidationFile">Upload Final JSON File</label>
+                    <input
+                        type="file"
+                        class="form-input"
+                        id="quickValidationFile"
+                        accept=".json,application/json"
+                        style="padding: 0.5rem;"
+                    >
+                    <div style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">
+                        Select a *_Final.json file from your computer
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-lg" onclick="loadQuickValidation()" id="quickValidationBtn" disabled>
+                    <span>⚡</span>
+                    Load for Validation
+                </button>
             </div>
 
             <!-- Folder Navigation -->
@@ -1354,11 +1422,13 @@
 
             if (!configured || !connected) {
                 document.getElementById('connectionCard').style.display = 'block';
+                document.getElementById('quickValidationCard').style.display = 'none';
                 document.getElementById('folderCard').style.display = 'none';
                 document.getElementById('fileCard').style.display = 'none';
                 document.getElementById('sendCard').style.display = 'none';
             } else {
                 document.getElementById('connectionCard').style.display = 'none';
+                document.getElementById('quickValidationCard').style.display = 'block';
                 document.getElementById('folderCard').style.display = 'block';
                 document.getElementById('fileCard').style.display = 'block';
                 document.getElementById('sendCard').style.display = 'block';
@@ -2457,6 +2527,9 @@
                                 <span class="${categoryClass} category-badge">${categoryLabel}</span>
                             </div>
                             <div class="procedure-actions">
+                                <button class="btn-add" onclick="addProcedureAt(${index + 1})" title="Add procedure after this one">
+                                    ➕ Add
+                                </button>
                                 <button class="btn-delete" onclick="deleteProcedure(${index})">
                                     🗑️ Delete
                                 </button>
@@ -2569,6 +2642,36 @@
             console.log(`Deleted procedure at index ${index}`);
         }
 
+        function addProcedureAt(index) {
+            // Create a new empty procedure
+            const newProcedure = {
+                title: '',
+                paragraph: '',
+                procedure: '',
+                category: '',
+                page: APP.procedures[index - 1]?.page || 1 // Use same page as previous procedure
+            };
+
+            // Insert at specified position
+            APP.procedures.splice(index, 0, newProcedure);
+            renderProcedureEditor();
+
+            // Scroll to the new procedure
+            setTimeout(() => {
+                const newCard = document.querySelector(`[data-index="${index}"]`);
+                if (newCard) {
+                    newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Highlight the new card briefly
+                    newCard.style.border = '2px solid var(--success)';
+                    setTimeout(() => {
+                        newCard.style.border = '';
+                    }, 2000);
+                }
+            }, 100);
+
+            console.log(`Added new procedure at index ${index}`);
+        }
+
         function toggleRawJson() {
             const rawJsonView = document.getElementById('rawJsonView');
             const toggleText = document.getElementById('rawJsonToggleText');
@@ -2579,6 +2682,92 @@
             } else {
                 rawJsonView.style.display = 'none';
                 toggleText.textContent = 'Show Raw JSON';
+            }
+        }
+
+        async function loadQuickValidation() {
+            const pbsCodeInput = document.getElementById('quickValidationPbsCode');
+            const fileInput = document.getElementById('quickValidationFile');
+            const pbsCode = pbsCodeInput.value.trim();
+            const file = fileInput.files[0];
+
+            if (!pbsCode || !file) {
+                alert('Please provide both PBS Code and JSON file');
+                return;
+            }
+
+            try {
+                // Read the JSON file
+                const fileContent = await file.text();
+                let jsonData;
+
+                try {
+                    jsonData = JSON.parse(fileContent);
+                } catch (parseError) {
+                    alert('Invalid JSON file. Please select a valid JSON file.');
+                    return;
+                }
+
+                // Validate that it contains procedures
+                let procedures = [];
+                if (Array.isArray(jsonData)) {
+                    procedures = jsonData;
+                } else if (jsonData.procedures && Array.isArray(jsonData.procedures)) {
+                    procedures = jsonData.procedures;
+                } else {
+                    alert('The JSON file does not contain a valid procedures array.');
+                    return;
+                }
+
+                if (procedures.length === 0) {
+                    alert('The JSON file contains no procedures.');
+                    return;
+                }
+
+                // Set up the app state
+                APP.currentJobId = `quick-validation-${Date.now()}`;
+                APP.procedures = procedures;
+                APP.originalJsonData = Array.isArray(jsonData) ? { procedures: jsonData, pbsCode } : { ...jsonData, pbsCode };
+
+                // Show results card and hide other cards
+                document.getElementById('resultsCard').style.display = 'block';
+                document.getElementById('jobInfo').style.display = 'block';
+                document.getElementById('progressInfo').style.display = 'none';
+                document.getElementById('manualInputSection').style.display = 'none';
+                document.getElementById('jsonResultSection').style.display = 'block';
+
+                // Update job info
+                document.getElementById('jobIdDisplay').textContent = APP.currentJobId;
+                document.getElementById('pbsCodeDisplay').textContent = pbsCode;
+
+                // Show success message
+                const resultSummary = document.getElementById('resultSummary');
+                resultSummary.innerHTML = `
+                    <div>Loaded from: <strong>${file.name}</strong></div>
+                    <div>Procedures found: <strong>${procedures.length}</strong></div>
+                    <div>PBS Code: <strong>${pbsCode}</strong></div>
+                `;
+
+                // Render the procedure editor
+                renderProcedureEditor();
+
+                // Scroll to results
+                document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                // Clear the inputs
+                pbsCodeInput.value = '';
+                fileInput.value = '';
+                document.getElementById('quickValidationBtn').disabled = true;
+
+                console.log('Quick validation loaded successfully:', {
+                    jobId: APP.currentJobId,
+                    pbsCode,
+                    procedureCount: procedures.length
+                });
+
+            } catch (error) {
+                console.error('Error loading quick validation:', error);
+                alert(`Error loading file: ${error.message}`);
             }
         }
 
@@ -2603,6 +2792,9 @@
                 document.getElementById('manualJsonInput').value = '';
                 document.getElementById('jsonDataView').value = '';
                 document.getElementById('procedureList').innerHTML = '';
+                document.getElementById('quickValidationPbsCode').value = '';
+                document.getElementById('quickValidationFile').value = '';
+                document.getElementById('quickValidationBtn').disabled = true;
 
                 // Reset app state
                 APP.currentJobId = null;
@@ -2620,6 +2812,20 @@
             document.getElementById('fileSearch').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchFiles();
             });
+
+            // Quick validation listeners
+            const quickPbsCode = document.getElementById('quickValidationPbsCode');
+            const quickFile = document.getElementById('quickValidationFile');
+            const quickBtn = document.getElementById('quickValidationBtn');
+
+            function updateQuickValidationButton() {
+                const hasPbsCode = quickPbsCode.value.trim() !== '';
+                const hasFile = quickFile.files.length > 0;
+                quickBtn.disabled = !(hasPbsCode && hasFile);
+            }
+
+            quickPbsCode.addEventListener('input', updateQuickValidationButton);
+            quickFile.addEventListener('change', updateQuickValidationButton);
         }
     </script>
 </body>
