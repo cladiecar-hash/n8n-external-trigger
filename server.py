@@ -9,6 +9,7 @@ from flask_cors import CORS
 from datetime import datetime
 import json
 import os
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -165,6 +166,66 @@ def list_results():
         'count': len(callback_results),
         'results': list(callback_results.values())
     }), 200
+
+# Proxy endpoint for n8n webhooks (solves CORS issues)
+@app.route('/api/proxy-webhook', methods=['POST'])
+def proxy_webhook():
+    """
+    Proxy endpoint to forward requests to n8n webhooks
+    Solves CORS issues by making the request server-side
+
+    Expected payload:
+    {
+        "webhookUrl": "https://n8n-instance/webhook/...",
+        "data": { ... } // The actual payload to send to n8n
+    }
+    """
+    try:
+        payload = request.get_json()
+
+        if not payload or 'webhookUrl' not in payload:
+            return jsonify({'error': 'Missing webhookUrl'}), 400
+
+        if 'data' not in payload:
+            return jsonify({'error': 'Missing data'}), 400
+
+        webhook_url = payload['webhookUrl']
+        webhook_data = payload['data']
+
+        # Make the request to n8n webhook
+        print(f"📤 Proxying request to: {webhook_url}")
+
+        response = requests.post(
+            webhook_url,
+            json=webhook_data,
+            headers={'Content-Type': 'application/json'},
+            timeout=30  # 30 second timeout
+        )
+
+        print(f"✅ n8n response: {response.status_code}")
+
+        # Forward the response back to the client
+        try:
+            response_data = response.json()
+        except:
+            response_data = {'message': response.text}
+
+        return jsonify({
+            'success': response.ok,
+            'status': response.status_code,
+            'data': response_data
+        }), response.status_code
+
+    except requests.RequestException as e:
+        print(f"❌ Error proxying to n8n: {str(e)}")
+        return jsonify({
+            'error': 'Failed to reach n8n webhook',
+            'details': str(e)
+        }), 502
+
+    except Exception as e:
+        print(f"❌ Error processing proxy request: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 # Health check
 @app.route('/api/health', methods=['GET'])

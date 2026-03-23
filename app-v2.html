@@ -1905,22 +1905,32 @@
                     payload.callbackToken = callbackToken;
                 }
 
-                const response = await fetch(webhookUrl, {
+                // Use proxy endpoint to avoid CORS issues
+                const proxyUrl = `${window.location.origin}/api/proxy-webhook`;
+                const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        webhookUrl: webhookUrl,
+                        data: payload
+                    })
                 });
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const result = await response.json().catch(() => ({}));
+                const proxyResult = await response.json().catch(() => ({}));
+                if (!proxyResult.success) {
+                    throw new Error(`n8n webhook returned ${proxyResult.status}`);
+                }
+
+                const result = proxyResult.data || {};
 
                 // Check if this is a 202 Accepted (async processing)
-                if (response.status === 202 || result.jobId) {
+                if (proxyResult.status === 202 || result.jobId) {
                     // Show processing status
                     statusDiv.innerHTML = `
                         <div class="alert alert-success">
@@ -2491,7 +2501,7 @@
                     callbackUrl: validationCallbackUrl
                 };
 
-                // Send to validation webhook
+                // Send to validation webhook via proxy (to avoid CORS issues)
                 const statusDiv = document.createElement('div');
                 statusDiv.className = 'loading';
                 statusDiv.style.marginTop = '1rem';
@@ -2504,12 +2514,17 @@
                 `;
                 document.getElementById('jsonResultSection').appendChild(statusDiv);
 
-                const response = await fetch(webhookUrl, {
+                // Use proxy endpoint to avoid CORS issues
+                const proxyUrl = `${window.location.origin}/api/proxy-webhook`;
+                const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(jsonData)
+                    body: JSON.stringify({
+                        webhookUrl: webhookUrl,
+                        data: jsonData
+                    })
                 });
 
                 statusDiv.remove();
@@ -2518,9 +2533,15 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const result = await response.json().catch(() => ({}));
+                const proxyResult = await response.json().catch(() => ({}));
+                const result = proxyResult.data || {};
 
-                alert(`✅ ${workflowName} generation started!\n\nData sent to n8n successfully.\n\nWorkflow: ${workflowName}\nProcedures: ${APP.procedures.length}\nResponse: ${response.status} ${response.statusText}`);
+                // Check if the proxied request was successful
+                if (!proxyResult.success) {
+                    throw new Error(`n8n webhook returned ${proxyResult.status}`);
+                }
+
+                alert(`✅ ${workflowName} generation started!\n\nData sent to n8n successfully.\n\nWorkflow: ${workflowName}\nProcedures: ${APP.procedures.length}\nResponse: ${proxyResult.status}`);
 
                 console.log(`${workflowName} response:`, result);
 
