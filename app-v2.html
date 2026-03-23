@@ -2473,9 +2473,20 @@
                     console.log('Using auto-configured validation callback URL:', validationCallbackUrl);
                 }
 
+                // Prepare validated file name (add _Validated before .json extension)
+                const originalFileName = APP.originalJsonData?.file_name || APP.originalJsonData?.fileName || '';
+                let validatedFileName = originalFileName;
+                if (originalFileName) {
+                    if (originalFileName.endsWith('.json')) {
+                        validatedFileName = originalFileName.replace(/\.json$/, '_Validated.json');
+                    } else {
+                        validatedFileName = originalFileName + '_Validated.json';
+                    }
+                }
+
                 const jsonData = {
                     procedures: proceduresWithPage,
-                    file_name: APP.originalJsonData?.file_name || APP.originalJsonData?.fileName || '',
+                    file_name: validatedFileName,
                     jobId: APP.currentJobId || APP.originalJsonData?.jobId || '',
                     callbackUrl: validationCallbackUrl
                 };
