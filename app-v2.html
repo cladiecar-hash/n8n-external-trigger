@@ -2497,6 +2497,7 @@
                 const jsonData = {
                     procedures: proceduresWithPage,
                     file_name: validatedFileName,
+                    pbsCode: APP.originalJsonData?.pbsCode || '',
                     jobId: APP.currentJobId || APP.originalJsonData?.jobId || '',
                     callbackUrl: validationCallbackUrl
                 };
