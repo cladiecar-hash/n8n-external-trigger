@@ -1033,9 +1033,13 @@
                             <span>⬇️</span>
                             Download JSON
                         </button>
-                        <button class="btn btn-success" onclick="validateAndSendToN8n()">
-                            <span>✅</span>
-                            Validate & Send to n8n
+                        <button class="btn btn-success" onclick="validateAndSendToN8n('sop')">
+                            <span>📄</span>
+                            Generate SOP TTC
+                        </button>
+                        <button class="btn btn-success" onclick="validateAndSendToN8n('annex')">
+                            <span>📎</span>
+                            Generate Annex
                         </button>
                         <button class="btn btn-outline" onclick="clearResults()">
                             <span>✕</span>
@@ -1103,9 +1107,15 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="validationWebhookUrl">Validation Webhook URL</label>
+                    <label class="form-label" for="validationWebhookUrl">Validation Webhook URL (SOP TTC)</label>
                     <input type="url" class="form-input" id="validationWebhookUrl" placeholder="https://your-n8n.com/webhook/validation">
-                    <span class="form-hint">The webhook endpoint where validated/edited JSON will be sent</span>
+                    <span class="form-hint">The webhook endpoint for generating SOP based on TTC template</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="annexWebhookUrl">Annex Webhook URL</label>
+                    <input type="url" class="form-input" id="annexWebhookUrl" placeholder="https://your-n8n.com/webhook/annex">
+                    <span class="form-hint">The webhook endpoint for generating Annex document to attach to existing SOP</span>
                 </div>
 
                 <div class="form-group">
@@ -1235,6 +1245,7 @@
             const callbackUrl = localStorage.getItem('callback_url');
             const callbackToken = localStorage.getItem('callback_token');
             const validationWebhookUrl = localStorage.getItem('validation_webhook_url');
+            const annexWebhookUrl = localStorage.getItem('annex_webhook_url');
             const validationCallbackUrl = localStorage.getItem('validation_callback_url');
             const supabaseUrl = localStorage.getItem('supabase_url');
             const supabaseKey = localStorage.getItem('supabase_key');
@@ -1246,6 +1257,7 @@
             if (callbackUrl) document.getElementById('callbackUrl').value = callbackUrl;
             if (callbackToken) document.getElementById('callbackToken').value = callbackToken;
             if (validationWebhookUrl) document.getElementById('validationWebhookUrl').value = validationWebhookUrl;
+            if (annexWebhookUrl) document.getElementById('annexWebhookUrl').value = annexWebhookUrl;
             if (validationCallbackUrl) document.getElementById('validationCallbackUrl').value = validationCallbackUrl;
             if (supabaseUrl) document.getElementById('supabaseUrl').value = supabaseUrl;
             if (supabaseKey) document.getElementById('supabaseKey').value = supabaseKey;
@@ -1277,6 +1289,7 @@
             const callbackUrl = document.getElementById('callbackUrl').value.trim();
             const callbackToken = document.getElementById('callbackToken').value.trim();
             const validationWebhookUrl = document.getElementById('validationWebhookUrl').value.trim();
+            const annexWebhookUrl = document.getElementById('annexWebhookUrl').value.trim();
             const validationCallbackUrl = document.getElementById('validationCallbackUrl').value.trim();
             const supabaseUrl = document.getElementById('supabaseUrl').value.trim();
             const supabaseKey = document.getElementById('supabaseKey').value.trim();
@@ -1320,12 +1333,23 @@
                 }
             }
 
+            // Validate annex webhook URL if provided
+            if (annexWebhookUrl) {
+                try {
+                    new URL(annexWebhookUrl);
+                } catch {
+                    showAlert('error', 'Invalid annex webhook URL', 'driveConnectionAlert');
+                    return;
+                }
+            }
+
             localStorage.setItem('google_client_id', clientId);
             localStorage.setItem('google_api_key', apiKey);
             localStorage.setItem('webhook_url', webhookUrl);
             localStorage.setItem('callback_url', callbackUrl);
             localStorage.setItem('callback_token', callbackToken);
             localStorage.setItem('validation_webhook_url', validationWebhookUrl);
+            localStorage.setItem('annex_webhook_url', annexWebhookUrl);
             localStorage.setItem('validation_callback_url', validationCallbackUrl);
             localStorage.setItem('supabase_url', supabaseUrl);
             localStorage.setItem('supabase_key', supabaseKey);
@@ -2408,11 +2432,14 @@
             }
         }
 
-        async function validateAndSendToN8n() {
-            const validationWebhookUrl = localStorage.getItem('validation_webhook_url');
+        async function validateAndSendToN8n(workflowType = 'sop') {
+            // Determine which webhook URL to use based on workflow type
+            const webhookUrlKey = workflowType === 'annex' ? 'annex_webhook_url' : 'validation_webhook_url';
+            const webhookUrl = localStorage.getItem(webhookUrlKey);
+            const workflowName = workflowType === 'annex' ? 'Annex' : 'SOP TTC';
 
-            if (!validationWebhookUrl) {
-                alert('❌ Validation Webhook URL not configured!\n\nPlease go to Settings and configure the Validation Webhook URL.');
+            if (!webhookUrl) {
+                alert(`❌ ${workflowName} Webhook URL not configured!\n\nPlease go to Settings and configure the ${workflowName} Webhook URL.`);
                 return;
             }
 
@@ -2446,9 +2473,20 @@
                     console.log('Using auto-configured validation callback URL:', validationCallbackUrl);
                 }
 
+                // Prepare validated file name (add _Validated before .json extension)
+                const originalFileName = APP.originalJsonData?.file_name || APP.originalJsonData?.fileName || '';
+                let validatedFileName = originalFileName;
+                if (originalFileName) {
+                    if (originalFileName.endsWith('.json')) {
+                        validatedFileName = originalFileName.replace(/\.json$/, '_Validated.json');
+                    } else {
+                        validatedFileName = originalFileName + '_Validated.json';
+                    }
+                }
+
                 const jsonData = {
                     procedures: proceduresWithPage,
-                    file_name: APP.originalJsonData?.file_name || APP.originalJsonData?.fileName || '',
+                    file_name: validatedFileName,
                     jobId: APP.currentJobId || APP.originalJsonData?.jobId || '',
                     callbackUrl: validationCallbackUrl
                 };
@@ -2462,11 +2500,11 @@
                 statusDiv.style.borderRadius = '0.5rem';
                 statusDiv.innerHTML = `
                     <div class="spinner"></div>
-                    <span>Sending validated data to n8n...</span>
+                    <span>Sending validated data to n8n (${workflowName})...</span>
                 `;
                 document.getElementById('jsonResultSection').appendChild(statusDiv);
 
-                const response = await fetch(validationWebhookUrl, {
+                const response = await fetch(webhookUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2482,9 +2520,9 @@
 
                 const result = await response.json().catch(() => ({}));
 
-                alert(`✅ Validation successful!\n\nData sent to n8n successfully.\n\nProcedures: ${APP.procedures.length}\nResponse: ${response.status} ${response.statusText}`);
+                alert(`✅ ${workflowName} generation started!\n\nData sent to n8n successfully.\n\nWorkflow: ${workflowName}\nProcedures: ${APP.procedures.length}\nResponse: ${response.status} ${response.statusText}`);
 
-                console.log('Validation response:', result);
+                console.log(`${workflowName} response:`, result);
 
             } catch (error) {
                 console.error('Error sending to n8n:', error);
