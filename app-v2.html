@@ -2786,7 +2786,13 @@
                 // Set up the app state
                 APP.currentJobId = `quick-validation-${Date.now()}`;
                 APP.procedures = procedures;
-                APP.originalJsonData = Array.isArray(jsonData) ? { procedures: jsonData, pbsCode } : { ...jsonData, pbsCode };
+
+                // Extract file_name from JSON or use uploaded filename
+                const extractedFileName = jsonData.file_name || jsonData.fileName || file.name;
+
+                APP.originalJsonData = Array.isArray(jsonData)
+                    ? { procedures: jsonData, pbsCode, file_name: extractedFileName }
+                    : { ...jsonData, pbsCode, file_name: extractedFileName };
 
                 // Show results card and hide other cards
                 document.getElementById('resultsCard').style.display = 'block';
