@@ -29,11 +29,17 @@ function loadStoredConfig() {
     const clientId = localStorage.getItem('google_client_id');
     const apiKey = localStorage.getItem('google_api_key');
     const webhookUrl = localStorage.getItem('webhook_url');
+    const templateWebhookUrl = localStorage.getItem('template_webhook_url');
+    const supabaseUrl = localStorage.getItem('supabase_url');
+    const supabaseKey = localStorage.getItem('supabase_key');
 
-    if (clientId && apiKey && webhookUrl) {
+    if (clientId && apiKey && webhookUrl && templateWebhookUrl && supabaseUrl && supabaseKey) {
         document.getElementById('clientId').value = clientId;
         document.getElementById('apiKey').value = apiKey;
         document.getElementById('webhookUrl').value = webhookUrl;
+        document.getElementById('templateWebhookUrl').value = templateWebhookUrl;
+        document.getElementById('supabaseUrl').value = supabaseUrl;
+        document.getElementById('supabaseKey').value = supabaseKey;
 
         document.getElementById('saveConfig').style.display = 'none';
         document.getElementById('editConfig').style.display = 'inline-block';
@@ -43,6 +49,9 @@ function loadStoredConfig() {
         document.getElementById('clientId').disabled = true;
         document.getElementById('apiKey').disabled = true;
         document.getElementById('webhookUrl').disabled = true;
+        document.getElementById('templateWebhookUrl').disabled = true;
+        document.getElementById('supabaseUrl').disabled = true;
+        document.getElementById('supabaseKey').disabled = true;
 
         showMessage('Configurazione caricata dal browser', 'info', 'authStatus');
     }
@@ -52,8 +61,11 @@ function saveConfig() {
     const clientId = document.getElementById('clientId').value.trim();
     const apiKey = document.getElementById('apiKey').value.trim();
     const webhookUrl = document.getElementById('webhookUrl').value.trim();
+    const templateWebhookUrl = document.getElementById('templateWebhookUrl').value.trim();
+    const supabaseUrl = document.getElementById('supabaseUrl').value.trim();
+    const supabaseKey = document.getElementById('supabaseKey').value.trim();
 
-    if (!clientId || !apiKey || !webhookUrl) {
+    if (!clientId || !apiKey || !webhookUrl || !templateWebhookUrl || !supabaseUrl || !supabaseKey) {
         alert('Compila tutti i campi della configurazione');
         return;
     }
@@ -61,14 +73,19 @@ function saveConfig() {
     // Validazione URL webhook
     try {
         new URL(webhookUrl);
+        new URL(templateWebhookUrl);
+        new URL(supabaseUrl);
     } catch {
-        alert('URL webhook non valido');
+        alert('URL webhook o Supabase non valido');
         return;
     }
 
     localStorage.setItem('google_client_id', clientId);
     localStorage.setItem('google_api_key', apiKey);
     localStorage.setItem('webhook_url', webhookUrl);
+    localStorage.setItem('template_webhook_url', templateWebhookUrl);
+    localStorage.setItem('supabase_url', supabaseUrl);
+    localStorage.setItem('supabase_key', supabaseKey);
 
     document.getElementById('saveConfig').style.display = 'none';
     document.getElementById('editConfig').style.display = 'inline-block';
@@ -78,6 +95,9 @@ function saveConfig() {
     document.getElementById('clientId').disabled = true;
     document.getElementById('apiKey').disabled = true;
     document.getElementById('webhookUrl').disabled = true;
+    document.getElementById('templateWebhookUrl').disabled = true;
+    document.getElementById('supabaseUrl').disabled = true;
+    document.getElementById('supabaseKey').disabled = true;
 
     showMessage('Configurazione salvata con successo!', 'success', 'authStatus');
 
@@ -92,6 +112,8 @@ function editConfig() {
     document.getElementById('clientId').disabled = false;
     document.getElementById('apiKey').disabled = false;
     document.getElementById('webhookUrl').disabled = false;
+    document.getElementById('supabaseUrl').disabled = false;
+    document.getElementById('supabaseKey').disabled = false;
 
     document.getElementById('saveConfig').style.display = 'inline-block';
     document.getElementById('editConfig').style.display = 'none';
@@ -327,6 +349,94 @@ function clearFileSelection() {
     updateSendButton();
 }
 
+// ============= SUPABASE DIAGNOSTICS =============
+
+async function checkJobStatus(jobId) {
+    const supabaseUrl = localStorage.getItem('supabase_url');
+    const supabaseKey = localStorage.getItem('supabase_key');
+
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configurazione Supabase mancante');
+    }
+
+    const response = await fetch(`${supabaseUrl}/rest/v1/rag_diagnostics?job_id=eq.${jobId}&order=timestamp.desc`, {
+        headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error(`Errore Supabase: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+}
+
+async function pollJobStatus(jobId, updateCallback) {
+    const maxAttempts = 600; // 10 minuti (600 * 1 secondo)
+    let attempts = 0;
+    let pollingInterval;
+
+    return new Promise((resolve, reject) => {
+        pollingInterval = setInterval(async () => {
+            try {
+                attempts++;
+
+                const statusRecords = await checkJobStatus(jobId);
+
+                if (!statusRecords || statusRecords.length === 0) {
+                    if (attempts > 5) {
+                        // Se dopo 5 tentativi non ci sono record, probabilmente c'è un problema
+                        clearInterval(pollingInterval);
+                        reject(new Error('Nessun record trovato per questo job'));
+                    }
+                    return;
+                }
+
+                // Prendi il record più recente
+                const latestStatus = statusRecords[0];
+
+                // Chiama la callback con l'aggiornamento
+                updateCallback(latestStatus);
+
+                // Controlla se il processo è completato o ha un errore
+                if (latestStatus.status === 'Completed' || latestStatus.status === 'completed') {
+                    clearInterval(pollingInterval);
+                    resolve(latestStatus);
+                } else if (latestStatus.status === 'Semantic Fix Completed') {
+                    // Stato finale di successo
+                    clearInterval(pollingInterval);
+                    resolve(latestStatus);
+                } else if (latestStatus.status && latestStatus.status.endsWith('Aborted')) {
+                    // Processo abortito - ferma il polling
+                    clearInterval(pollingInterval);
+                    reject(new Error(`Processo interrotto: ${latestStatus.status}${latestStatus.error_message ? ' - ' + latestStatus.error_message : ''}`));
+                } else if (latestStatus.status === 'Error' || latestStatus.status === 'error' || latestStatus.error_message) {
+                    clearInterval(pollingInterval);
+                    reject(new Error(latestStatus.error_message || 'Errore nel processo'));
+                }
+
+                // Timeout dopo maxAttempts
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollingInterval);
+                    reject(new Error('Timeout: processo non completato entro 10 minuti'));
+                }
+
+            } catch (error) {
+                console.error('Errore durante il polling:', error);
+                // Non interrompiamo subito, potrebbe essere un errore temporaneo
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollingInterval);
+                    reject(error);
+                }
+            }
+        }, 1000); // Polling ogni secondo
+    });
+}
+
 // ============= INVIO A WEBHOOK N8N =============
 
 async function sendToWebhook() {
@@ -353,7 +463,7 @@ async function sendToWebhook() {
     document.getElementById('sendBtn').disabled = true;
     sendStatus.style.display = 'block';
     sendStatus.className = 'status-box';
-    sendStatus.innerHTML = '<div class="loading">Invio al webhook n8n</div>';
+    sendStatus.innerHTML = '<div class="loading">📤 Invio al webhook n8n...</div>';
 
     try {
         // Prepara i dati da inviare (File ID, PBS Code e metadata utili)
@@ -383,19 +493,85 @@ async function sendToWebhook() {
 
         const result = await webhookResponse.json().catch(() => ({}));
 
-        sendStatus.className = 'status-box success';
-        sendStatus.innerHTML = `
-            <h3>✓ Invio Completato!</h3>
-            <p><strong>File ID:</strong> ${selectedFile.id}</p>
-            <p><strong>Nome File:</strong> ${selectedFile.name}</p>
-            <p><strong>Codice PBS:</strong> ${pbsCode}</p>
-            <p><strong>Timestamp:</strong> ${new Date().toLocaleString('it-IT')}</p>
-            ${result.message ? `<p><strong>Risposta:</strong> ${result.message}</p>` : ''}
-        `;
+        // Se il webhook restituisce un job_id, avvia il monitoraggio
+        if (result.job_id || result.jobId) {
+            const jobId = result.job_id || result.jobId;
 
-        // Reset form
-        document.getElementById('pbsCode').value = '';
-        clearFileSelection();
+            sendStatus.innerHTML = `
+                <h3>⏳ Elaborazione in corso...</h3>
+                <p><strong>Job ID:</strong> ${jobId}</p>
+                <p><strong>File:</strong> ${selectedFile.name}</p>
+                <p><strong>PBS:</strong> ${pbsCode}</p>
+                <div id="progressInfo" style="margin-top: 15px;">
+                    <div class="loading">Attendere elaborazione...</div>
+                </div>
+            `;
+
+            // Avvia il polling dello stato
+            try {
+                const finalStatus = await pollJobStatus(jobId, (status) => {
+                    // Callback chiamata ad ogni aggiornamento
+                    updateProgressUI(status);
+                });
+
+                // Processo completato con successo
+                sendStatus.className = 'status-box success';
+                const completionPercentage = finalStatus.to_process > 0
+                    ? Math.round((finalStatus.processed / finalStatus.to_process) * 100)
+                    : 100;
+
+                sendStatus.innerHTML = `
+                    <h3>✅ Elaborazione Completata!</h3>
+                    <p><strong>Job ID:</strong> ${jobId}</p>
+                    <p><strong>File:</strong> ${selectedFile.name}</p>
+                    <p><strong>PBS:</strong> ${pbsCode}</p>
+                    <p><strong>Stato finale:</strong> ${formatStatusName(finalStatus.status)}</p>
+                    <p><strong>Processati:</strong> ${finalStatus.processed}/${finalStatus.to_process} elementi (${completionPercentage}%)</p>
+                    <p><strong>Completato:</strong> ${new Date(finalStatus.timestamp).toLocaleString('it-IT')}</p>
+                `;
+
+                // Reset form dopo successo
+                setTimeout(() => {
+                    document.getElementById('pbsCode').value = '';
+                    clearFileSelection();
+                }, 3000);
+
+            } catch (pollError) {
+                // Errore durante il polling o nel processo
+                const isAborted = pollError.message && pollError.message.includes('Processo interrotto');
+
+                sendStatus.className = isAborted ? 'status-box' : 'status-box error';
+                sendStatus.style.borderLeft = isAborted ? '4px solid #FF9800' : '4px solid #F44336';
+
+                sendStatus.innerHTML = `
+                    <h3>${isAborted ? '⚠️ Processo Interrotto' : '❌ Errore durante l\'elaborazione'}</h3>
+                    <p><strong>Job ID:</strong> ${jobId}</p>
+                    <p><strong>File:</strong> ${selectedFile.name}</p>
+                    <p><strong>PBS:</strong> ${pbsCode}</p>
+                    <p style="color: ${isAborted ? '#FF9800' : '#F44336'};"><strong>Dettaglio:</strong> ${pollError.message}</p>
+                    ${isAborted ? '<p><small>Il workflow n8n ha interrotto l\'elaborazione. Controlla i log per maggiori dettagli.</small></p>' : ''}
+                `;
+            }
+
+        } else {
+            // Vecchio comportamento: webhook non restituisce job_id
+            sendStatus.className = 'status-box success';
+            sendStatus.innerHTML = `
+                <h3>✓ Invio Completato!</h3>
+                <p><strong>File ID:</strong> ${selectedFile.id}</p>
+                <p><strong>Nome File:</strong> ${selectedFile.name}</p>
+                <p><strong>Codice PBS:</strong> ${pbsCode}</p>
+                <p><strong>Timestamp:</strong> ${new Date().toLocaleString('it-IT')}</p>
+                ${result.message ? `<p><strong>Risposta:</strong> ${result.message}</p>` : ''}
+                <p style="color: orange;"><small>⚠️ Job ID non restituito: monitoraggio non disponibile</small></p>
+            `;
+
+            // Reset form
+            setTimeout(() => {
+                document.getElementById('pbsCode').value = '';
+                clearFileSelection();
+            }, 3000);
+        }
 
     } catch (error) {
         console.error('Errore nell\'invio:', error);
@@ -408,6 +584,106 @@ async function sendToWebhook() {
     } finally {
         document.getElementById('sendBtn').disabled = false;
     }
+}
+
+function updateProgressUI(status) {
+    const progressInfo = document.getElementById('progressInfo');
+    if (!progressInfo) return;
+
+    const percentage = status.to_process > 0
+        ? Math.round((status.processed / status.to_process) * 100)
+        : 0;
+
+    // Determina icona e colore in base allo stato
+    let statusIcon = '⏳';
+    let statusColor = '#2196F3'; // Blu per in corso
+    let progressBarColor = '#2196F3';
+    const statusText = status.status || 'Ongoing';
+
+    // Stati completati con successo
+    if (statusText === 'Completed' || statusText === 'completed' || statusText === 'Semantic Fix Completed') {
+        statusIcon = '✅';
+        statusColor = '#4CAF50'; // Verde
+        progressBarColor = '#4CAF50';
+    }
+    // Stati in corso
+    else if (statusText.includes('Started') || statusText.includes('Ongoing')) {
+        statusIcon = '⏳';
+        statusColor = '#2196F3'; // Blu
+        progressBarColor = '#2196F3';
+    }
+    // Stati completati parziali
+    else if (statusText.includes('Completed') && !statusText.includes('Semantic Fix')) {
+        statusIcon = '✓';
+        statusColor = '#4CAF50'; // Verde
+        progressBarColor = '#4CAF50';
+    }
+    // Stati abortiti
+    else if (statusText.includes('Aborted') || statusText === 'Aborted') {
+        statusIcon = '⚠️';
+        statusColor = '#FF9800'; // Arancione
+        progressBarColor = '#FF9800';
+    }
+    // Stati di errore
+    else if (statusText === 'Error' || statusText === 'error') {
+        statusIcon = '❌';
+        statusColor = '#F44336'; // Rosso
+        progressBarColor = '#F44336';
+    }
+
+    // Formatta il nome dello stato per una migliore leggibilità
+    const formattedStatus = formatStatusName(statusText);
+
+    progressInfo.innerHTML = `
+        <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; border-left: 4px solid ${statusColor};">
+            <p style="margin: 5px 0; font-size: 16px;">
+                <strong>Stato:</strong> ${statusIcon} <span style="color: ${statusColor};">${formattedStatus}</span>
+            </p>
+            <p style="margin: 5px 0;"><strong>Progresso:</strong> ${status.processed} / ${status.to_process} elementi</p>
+
+            <!-- Barra di progresso -->
+            <div style="background: #ddd; height: 24px; border-radius: 12px; overflow: hidden; margin: 10px 0; position: relative;">
+                <div style="background: ${progressBarColor}; height: 100%; width: ${percentage}%; transition: width 0.3s ease-in-out; display: flex; align-items: center; justify-content: center;">
+                    <span style="color: white; font-weight: bold; font-size: 12px; position: absolute; left: 50%; transform: translateX(-50%); z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${percentage}%</span>
+                </div>
+            </div>
+
+            ${status.workflow_name ? `<p style="margin: 5px 0;"><small><strong>Workflow:</strong> ${status.workflow_name}</small></p>` : ''}
+            ${status.node_name ? `<p style="margin: 5px 0;"><small><strong>Fase:</strong> ${status.node_name}</small></p>` : ''}
+            ${status.input_file ? `<p style="margin: 5px 0;"><small><strong>File:</strong> ${status.input_file}</small></p>` : ''}
+            ${status.error_message ? `<p style="color: ${statusColor}; margin: 10px 0; padding: 10px; background: #fff3cd; border-radius: 4px;"><strong>⚠️ Messaggio:</strong> ${status.error_message}</p>` : ''}
+            <p style="margin: 5px 0; color: #666;"><small>⏱️ Aggiornato: ${new Date(status.timestamp).toLocaleTimeString('it-IT')}</small></p>
+        </div>
+    `;
+}
+
+function formatStatusName(status) {
+    // Formatta i nomi degli stati per una migliore leggibilità
+    const statusMap = {
+        'Parse PDF Started': '📄 Parsing PDF...',
+        'Parse PDF Completed': '📄 Parsing PDF completato',
+        'Parse PDF Aborted': '📄 Parsing PDF interrotto',
+        'Metadata Extraction Started': '🔍 Estrazione metadati...',
+        'Metadata Extraction Completed': '🔍 Metadati estratti',
+        'Metadata Extraction Aborted': '🔍 Estrazione metadati interrotta',
+        'Embedding Started': '🧬 Creazione embeddings...',
+        'Embedding Completed': '🧬 Embeddings creati',
+        'Embedding Aborted': '🧬 Creazione embeddings interrotta',
+        'Procedure Extraction Started': '📋 Estrazione procedure...',
+        'Procedure Extraction Ongoing': '📋 Estrazione procedure in corso...',
+        'Procedure Extraction Completed': '📋 Procedure estratte',
+        'Procedure Extraction Aborted': '📋 Estrazione procedure interrotta',
+        'Add Context Started': '➕ Aggiunta contesto...',
+        'Add Context Completed': '➕ Contesto aggiunto',
+        'Add Context Aborted': '➕ Aggiunta contesto interrotta',
+        'Semantic Fix Started': '🔧 Correzione semantica...',
+        'Semantic Fix Completed': '🔧 Correzione semantica completata',
+        'Aborted': '⚠️ Processo interrotto',
+        'Completed': '✅ Completato',
+        'Ongoing': '⏳ In elaborazione...'
+    };
+
+    return statusMap[status] || status;
 }
 
 // ============= UTILITY FUNCTIONS =============

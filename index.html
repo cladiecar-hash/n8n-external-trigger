@@ -29,8 +29,25 @@
             </div>
 
             <div class="form-group">
-                <label for="webhookUrl">URL Webhook n8n:</label>
+                <label for="webhookUrl">URL Webhook n8n (Iniziale):</label>
                 <input type="url" id="webhookUrl" placeholder="https://your-n8n-instance.com/webhook/..." required>
+                <small>Webhook per inviare i dati iniziali del PDF</small>
+            </div>
+
+            <div class="form-group">
+                <label for="templateWebhookUrl">URL Webhook Template (Finale):</label>
+                <input type="url" id="templateWebhookUrl" placeholder="https://your-n8n-instance.com/webhook/template..." required>
+                <small>Webhook per ricevere il JSON finale del template generato</small>
+            </div>
+
+            <div class="form-group">
+                <label for="supabaseUrl">Supabase URL:</label>
+                <input type="url" id="supabaseUrl" placeholder="https://xxx.supabase.co" required>
+            </div>
+
+            <div class="form-group">
+                <label for="supabaseKey">Supabase Anon Key:</label>
+                <input type="password" id="supabaseKey" placeholder="La tua Supabase Anon Key" required>
             </div>
 
             <div class="button-group">

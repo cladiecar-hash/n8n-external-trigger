@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google Drive PDF Sender</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23FF6D5A' width='100' height='100' rx='20'/><circle fill='%23FFF' cx='30' cy='35' r='12'/><circle fill='%23FFF' cx='70' cy='35' r='12'/><rect fill='%23FFF' x='25' y='55' width='50' height='8' rx='4'/><rect fill='%23FFF' x='35' y='70' width='30' height='8' rx='4'/></svg>">
+    <link rel="icon" href="logo.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="logo.ico" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -65,6 +66,15 @@
         .logo {
             font-size: 3rem;
             margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logo img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
         }
 
         .title {
@@ -589,6 +599,26 @@
             box-shadow: 0 4px 8px -2px rgb(239 68 68 / 0.3);
         }
 
+        .btn-add {
+            background: var(--success);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 2px 4px -1px rgb(16 185 129 / 0.2);
+            margin-right: 0.5rem;
+        }
+
+        .btn-add:hover {
+            background: var(--success-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px -2px rgb(16 185 129 / 0.3);
+        }
+
         .procedure-field {
             margin-bottom: 1rem;
         }
@@ -657,15 +687,15 @@
             margin-left: 0.5rem;
         }
 
-        .category-Maintenance { background: #dbeafe; color: #1e40af; }
-        .category-Safety { background: #fee2e2; color: #991b1b; }
-        .category-Operation { background: #d1fae5; color: #065f46; }
-        .category-Instruction { background: #fef3c7; color: #92400e; }
-        .category-Installation { background: #e0e7ff; color: #3730a3; }
-        .category-Troubleshooting { background: #fed7aa; color: #9a3412; }
-        .category-Warranty { background: #fce7f3; color: #831843; }
+        .category-INSTALLATION-AND-COMMISSIONING { background: #e0e7ff; color: #3730a3; }
+        .category-OPERATION { background: #d1fae5; color: #065f46; }
+        .category-PREVENTIVE-MAINTENANCE { background: #fef3c7; color: #92400e; }
+        .category-CORRECTIVE-MAINTENANCE-TROUBLESHOOTING { background: #fed7aa; color: #9a3412; }
+        .category-WARRANTY-AND-COMPLIANCE { background: #fce7f3; color: #831843; }
+        .category-SAFETY-AND-HAZARD-MITIGATION { background: #fee2e2; color: #991b1b; }
+        .category-EMERGENCY-FIRST-AID { background: #fecaca; color: #7f1d1d; }
+        .category-INSTRUCTION { background: #fef9c3; color: #713f12; }
         .category-General { background: #f3f4f6; color: #374151; }
-        .category-Healthcare { background: #dcfce7; color: #14532d; }
 
         @media (max-width: 640px) {
             body {
@@ -702,7 +732,9 @@
             </div>
 
             <div class="header">
-                <div class="logo">🔷</div>
+                <div class="logo">
+                    <img src="logo.ico" alt="App Logo">
+                </div>
                 <h1 class="title">Google Drive PDF Sender</h1>
                 <p class="subtitle">Send PDF files from Google Drive to n8n webhook</p>
             </div>
@@ -734,6 +766,54 @@
                 </div>
             </div>
 
+            <!-- Quick Validation Card -->
+            <div class="card" id="quickValidationCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span class="icon">⚡</span>
+                        Quick Validation
+                    </h2>
+                </div>
+                <div class="alert alert-info">
+                    <span class="alert-icon">💡</span>
+                    <div class="alert-content">
+                        <div class="alert-title">Skip to Manual Validation</div>
+                        <div>Already have a *_Final.json file? Load it here with a PBS Code to jump directly to the validation step.</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="quickValidationPbsCode">PBS Code</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        id="quickValidationPbsCode"
+                        placeholder="Enter PBS Code (e.g., 29370)"
+                        pattern="[0-9]*"
+                        inputmode="numeric"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="quickValidationFile">Upload Final JSON File</label>
+                    <input
+                        type="file"
+                        class="form-input"
+                        id="quickValidationFile"
+                        accept=".json,application/json"
+                        style="padding: 0.5rem;"
+                    >
+                    <div style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">
+                        Select a *_Final.json file from your computer
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-lg" onclick="loadQuickValidation()" id="quickValidationBtn" disabled>
+                    <span>⚡</span>
+                    Load for Validation
+                </button>
+            </div>
+
             <!-- Folder Navigation -->
             <div class="card" id="folderCard" style="display: none;">
                 <div class="card-header">
@@ -741,6 +821,17 @@
                         <span class="icon">📂</span>
                         Browse Folders
                     </h2>
+                </div>
+
+                <!-- Breadcrumb Navigation -->
+                <div id="folderBreadcrumb" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 0.5rem; display: none;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-outline" onclick="navigateToRoot()" style="padding: 0.5rem 1rem;">
+                            <span>🏠</span>
+                            <span>My Drive + Shared Drives</span>
+                        </button>
+                        <span id="breadcrumbPath" style="display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;"></span>
+                    </div>
                 </div>
 
                 <div class="search-box">
@@ -751,20 +842,12 @@
                     </button>
                 </div>
 
-                <div class="file-list" id="folderList" style="max-height: 300px;">
+                <div class="file-list" id="folderList" style="max-height: 400px;">
                     <div class="empty-state">
                         <div class="empty-state-icon">📂</div>
-                        <div class="empty-state-title">Search for folders</div>
-                        <div>Enter a folder name above or leave blank to see all folders</div>
+                        <div class="empty-state-title">Browse or search for folders</div>
+                        <div>Click the search button or leave blank to see all folders in the current location</div>
                     </div>
-                </div>
-
-                <div id="currentFolderBreadcrumb" style="display: none; margin-top: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="color: var(--text-secondary); font-size: 0.875rem;">Current folder:</span>
-                    <span id="currentFolderName" style="font-weight: 600; color: var(--primary);"></span>
-                    <button class="btn btn-outline btn-icon" onclick="clearFolder()" title="Clear folder filter" style="margin-left: auto;">
-                        <span>✕</span>
-                    </button>
                 </div>
             </div>
 
@@ -852,6 +935,36 @@
                     </div>
                 </div>
 
+                <!-- Progress Section -->
+                <div id="progressInfo" style="display: none; margin-bottom: 1rem;">
+                    <div style="padding: 1.5rem; background: var(--bg-secondary); border-radius: 0.5rem; border: 2px solid var(--border);">
+                        <!-- Stats Row -->
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; gap: 1rem;">
+                            <div style="flex: 1; text-align: center; padding: 0.75rem; background: white; border-radius: 0.5rem; box-shadow: var(--shadow-sm);">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px;">Processed</div>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);" id="processedCount">0</div>
+                            </div>
+                            <div style="flex: 1; text-align: center; padding: 0.75rem; background: white; border-radius: 0.5rem; box-shadow: var(--shadow-sm);">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px;">To Process</div>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);" id="toProcessCount">0</div>
+                            </div>
+                            <div style="flex: 1; text-align: center; padding: 0.75rem; background: white; border-radius: 0.5rem; box-shadow: var(--shadow-sm);">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px;">Progress</div>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);" id="percentageDisplay">0%</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div style="margin-top: 1rem;">
+                            <div style="background: #e2e8f0; border-radius: 9999px; height: 1.5rem; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                                <div id="progressBar" style="background: linear-gradient(90deg, var(--success) 0%, var(--success-light) 100%); height: 100%; width: 0%; transition: width 0.5s ease-out; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+                                    <span id="progressBarText">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="manualInputSection" style="display: none; margin-bottom: 1rem;">
                     <div class="alert alert-info">
                         <span class="alert-icon">ℹ️</span>
@@ -920,9 +1033,13 @@
                             <span>⬇️</span>
                             Download JSON
                         </button>
-                        <button class="btn btn-success" onclick="validateAndSendToN8n()">
-                            <span>✅</span>
-                            Validate & Send to n8n
+                        <button class="btn btn-success" onclick="validateAndSendToN8n('sop')">
+                            <span>📄</span>
+                            Generate SOP TTC
+                        </button>
+                        <button class="btn btn-success" onclick="validateAndSendToN8n('annex')">
+                            <span>📎</span>
+                            Generate Annex
                         </button>
                         <button class="btn btn-outline" onclick="clearResults()">
                             <span>✕</span>
@@ -972,21 +1089,57 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="callbackUrl">Callback URL (Optional)</label>
-                    <input type="url" class="form-input" id="callbackUrl" placeholder="https://your-app.com/api/callback">
-                    <span class="form-hint">URL where n8n will send the processed JSON results. Leave empty to paste results manually.</span>
+                    <label class="form-label" for="callbackUrl">
+                        Extraction Callback URL
+                        <span style="color: var(--success); font-size: 0.875rem; font-weight: 400;">✓ Auto-configured</span>
+                    </label>
+                    <input type="url" class="form-input" id="callbackUrl" placeholder="">
+                    <span class="form-hint">
+                        <strong>Optional:</strong> Override automatic callback URL.
+                        Auto-configured to: <code id="autoCallbackUrl"></code>
+                    </span>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="callbackToken">Callback Token (Optional)</label>
                     <input type="text" class="form-input" id="callbackToken" placeholder="your-secret-token">
-                    <span class="form-hint">Bearer token for authenticating callback requests</span>
+                    <span class="form-hint">Bearer token for authenticating callback requests (if required by n8n)</span>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="validationWebhookUrl">Validation Webhook URL</label>
+                    <label class="form-label" for="validationWebhookUrl">Validation Webhook URL (SOP TTC)</label>
                     <input type="url" class="form-input" id="validationWebhookUrl" placeholder="https://your-n8n.com/webhook/validation">
-                    <span class="form-hint">The webhook endpoint where validated/edited JSON will be sent</span>
+                    <span class="form-hint">The webhook endpoint for generating SOP based on TTC template</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="annexWebhookUrl">Annex Webhook URL</label>
+                    <input type="url" class="form-input" id="annexWebhookUrl" placeholder="https://your-n8n.com/webhook/annex">
+                    <span class="form-hint">The webhook endpoint for generating Annex document to attach to existing SOP</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="validationCallbackUrl">
+                        Validation Callback URL
+                        <span style="color: var(--success); font-size: 0.875rem; font-weight: 400;">✓ Auto-configured</span>
+                    </label>
+                    <input type="url" class="form-input" id="validationCallbackUrl" placeholder="">
+                    <span class="form-hint">
+                        <strong>Optional:</strong> Override automatic validation callback.
+                        Auto-configured to: <code id="autoValidationCallbackUrl"></code>
+                    </span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="supabaseUrl">Supabase URL <span style="color: red;">*</span></label>
+                    <input type="url" class="form-input" id="supabaseUrl" placeholder="https://xxx.supabase.co" required>
+                    <span class="form-hint">Your Supabase project URL for real-time job monitoring</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="supabaseKey">Supabase Anon Key <span style="color: red;">*</span></label>
+                    <input type="password" class="form-input" id="supabaseKey" placeholder="Your Supabase anon key" required>
+                    <span class="form-hint">Anonymous key for querying the rag_diagnostics table</span>
                 </div>
 
                 <button class="btn btn-primary btn-lg" id="saveConfigBtn" onclick="saveConfig()">
@@ -1037,6 +1190,7 @@
             selectedFile: null,
             currentFolderId: null,
             currentFolderName: null,
+            folderPath: [],  // Breadcrumb navigation path
             connected: false,
             pollingInterval: null,
             currentJobId: null,
@@ -1051,15 +1205,14 @@
 
         // Categories for dropdown
         const CATEGORIES = [
-            'Maintenance',
-            'Safety',
-            'Operation',
-            'Instruction',
-            'Installation',
-            'Troubleshooting',
-            'Warranty',
-            'General Definitions',
-            'Healthcare'
+            'INSTALLATION_AND_COMMISSIONING',
+            'OPERATION',
+            'PREVENTIVE_MAINTENANCE',
+            'CORRECTIVE_MAINTENANCE_TROUBLESHOOTING',
+            'WARRANTY_AND_COMPLIANCE',
+            'SAFETY_AND_HAZARD_MITIGATION',
+            'EMERGENCY_FIRST_AID',
+            'INSTRUCTION'
         ];
 
         // Initialize
@@ -1092,6 +1245,11 @@
             const callbackUrl = localStorage.getItem('callback_url');
             const callbackToken = localStorage.getItem('callback_token');
             const validationWebhookUrl = localStorage.getItem('validation_webhook_url');
+            const annexWebhookUrl = localStorage.getItem('annex_webhook_url');
+            const validationCallbackUrl = localStorage.getItem('validation_callback_url');
+            const supabaseUrl = localStorage.getItem('supabase_url');
+            const supabaseKey = localStorage.getItem('supabase_key');
+            const lastPbsCode = localStorage.getItem('last_pbs_code');
 
             if (clientId) document.getElementById('clientId').value = clientId;
             if (apiKey) document.getElementById('apiKey').value = apiKey;
@@ -1099,8 +1257,29 @@
             if (callbackUrl) document.getElementById('callbackUrl').value = callbackUrl;
             if (callbackToken) document.getElementById('callbackToken').value = callbackToken;
             if (validationWebhookUrl) document.getElementById('validationWebhookUrl').value = validationWebhookUrl;
+            if (annexWebhookUrl) document.getElementById('annexWebhookUrl').value = annexWebhookUrl;
+            if (validationCallbackUrl) document.getElementById('validationCallbackUrl').value = validationCallbackUrl;
+            if (supabaseUrl) document.getElementById('supabaseUrl').value = supabaseUrl;
+            if (supabaseKey) document.getElementById('supabaseKey').value = supabaseKey;
 
-            return !!(clientId && apiKey && webhookUrl);
+            // Show auto-configured callback URLs (works for both localhost and Railway!)
+            const autoCallbackUrlElem = document.getElementById('autoCallbackUrl');
+            const autoValidationCallbackUrlElem = document.getElementById('autoValidationCallbackUrl');
+
+            if (autoCallbackUrlElem) {
+                autoCallbackUrlElem.textContent = `${window.location.origin}/api/callback`;
+            }
+            if (autoValidationCallbackUrlElem) {
+                autoValidationCallbackUrlElem.textContent = `${window.location.origin}/api/validation-callback`;
+            }
+
+            // Load last PBS code if available
+            const pbsCodeInput = document.getElementById('pbsCode');
+            if (pbsCodeInput && lastPbsCode) {
+                pbsCodeInput.value = lastPbsCode;
+            }
+
+            return !!(clientId && apiKey && webhookUrl && supabaseUrl && supabaseKey);
         }
 
         function saveConfig() {
@@ -1110,9 +1289,13 @@
             const callbackUrl = document.getElementById('callbackUrl').value.trim();
             const callbackToken = document.getElementById('callbackToken').value.trim();
             const validationWebhookUrl = document.getElementById('validationWebhookUrl').value.trim();
+            const annexWebhookUrl = document.getElementById('annexWebhookUrl').value.trim();
+            const validationCallbackUrl = document.getElementById('validationCallbackUrl').value.trim();
+            const supabaseUrl = document.getElementById('supabaseUrl').value.trim();
+            const supabaseKey = document.getElementById('supabaseKey').value.trim();
 
-            if (!clientId || !apiKey || !webhookUrl) {
-                showAlert('error', 'Please fill in required fields (Client ID, API Key, Webhook URL)', 'driveConnectionAlert');
+            if (!clientId || !apiKey || !webhookUrl || !supabaseUrl || !supabaseKey) {
+                showAlert('error', 'Please fill in required fields (Client ID, API Key, Webhook URL, Supabase URL, Supabase Key)', 'driveConnectionAlert');
                 return;
             }
 
@@ -1120,6 +1303,13 @@
                 new URL(webhookUrl);
             } catch {
                 showAlert('error', 'Invalid webhook URL', 'driveConnectionAlert');
+                return;
+            }
+
+            try {
+                new URL(supabaseUrl);
+            } catch {
+                showAlert('error', 'Invalid Supabase URL', 'driveConnectionAlert');
                 return;
             }
 
@@ -1143,12 +1333,26 @@
                 }
             }
 
+            // Validate annex webhook URL if provided
+            if (annexWebhookUrl) {
+                try {
+                    new URL(annexWebhookUrl);
+                } catch {
+                    showAlert('error', 'Invalid annex webhook URL', 'driveConnectionAlert');
+                    return;
+                }
+            }
+
             localStorage.setItem('google_client_id', clientId);
             localStorage.setItem('google_api_key', apiKey);
             localStorage.setItem('webhook_url', webhookUrl);
             localStorage.setItem('callback_url', callbackUrl);
             localStorage.setItem('callback_token', callbackToken);
             localStorage.setItem('validation_webhook_url', validationWebhookUrl);
+            localStorage.setItem('annex_webhook_url', annexWebhookUrl);
+            localStorage.setItem('validation_callback_url', validationCallbackUrl);
+            localStorage.setItem('supabase_url', supabaseUrl);
+            localStorage.setItem('supabase_key', supabaseKey);
 
             showAlert('success', 'Configuration saved successfully!', 'driveConnectionAlert');
 
@@ -1242,11 +1446,13 @@
 
             if (!configured || !connected) {
                 document.getElementById('connectionCard').style.display = 'block';
+                document.getElementById('quickValidationCard').style.display = 'none';
                 document.getElementById('folderCard').style.display = 'none';
                 document.getElementById('fileCard').style.display = 'none';
                 document.getElementById('sendCard').style.display = 'none';
             } else {
                 document.getElementById('connectionCard').style.display = 'none';
+                document.getElementById('quickValidationCard').style.display = 'block';
                 document.getElementById('folderCard').style.display = 'block';
                 document.getElementById('fileCard').style.display = 'block';
                 document.getElementById('sendCard').style.display = 'block';
@@ -1288,39 +1494,123 @@
             folderList.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading folders...</span></div>';
 
             try {
-                let query = "mimeType='application/vnd.google-apps.folder' and trashed=false";
-                if (searchTerm) {
-                    query += ` and name contains '${searchTerm}'`;
+                let folders = [];
+
+                // If we're at root level (no current folder)
+                if (!APP.currentFolderId) {
+                    // If there's a search term, search everywhere
+                    if (searchTerm) {
+                        let query = "mimeType='application/vnd.google-apps.folder' and trashed=false";
+                        query += ` and name contains '${searchTerm}'`;
+
+                        const response = await gapi.client.drive.files.list({
+                            q: query,
+                            pageSize: 50,
+                            fields: 'files(id, name, modifiedTime, driveId, parents)',
+                            orderBy: 'name',
+                            corpora: 'allDrives',
+                            includeItemsFromAllDrives: true,
+                            supportsAllDrives: true
+                        });
+
+                        folders = response.result.files || [];
+                    } else {
+                        // Show only root-level folders from My Drive + Shared Drives
+
+                        // 1. Get root folders from My Drive
+                        const myDriveQuery = "mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false";
+                        const myDriveResponse = await gapi.client.drive.files.list({
+                            q: myDriveQuery,
+                            pageSize: 50,
+                            fields: 'files(id, name, modifiedTime)',
+                            orderBy: 'name',
+                            corpora: 'user',
+                            supportsAllDrives: true
+                        });
+
+                        // 2. Get Shared Drives
+                        const sharedDrivesResponse = await gapi.client.drive.drives.list({
+                            pageSize: 50,
+                            fields: 'drives(id, name)'
+                        });
+
+                        // Combine: My Drive folders + Shared Drives
+                        const myDriveFolders = (myDriveResponse.result.files || []).map(f => ({
+                            ...f,
+                            isMyDrive: true
+                        }));
+
+                        const sharedDrives = (sharedDrivesResponse.result.drives || []).map(d => ({
+                            id: d.id,
+                            name: d.name,
+                            isSharedDrive: true,
+                            driveId: d.id
+                        }));
+
+                        folders = [...myDriveFolders, ...sharedDrives];
+                    }
+                } else {
+                    // We're inside a folder - show its subfolders
+                    let query = "mimeType='application/vnd.google-apps.folder' and trashed=false";
+                    query += ` and '${APP.currentFolderId}' in parents`;
+
+                    // Add search term if provided
+                    if (searchTerm) {
+                        query += ` and name contains '${searchTerm}'`;
+                    }
+
+                    const response = await gapi.client.drive.files.list({
+                        q: query,
+                        pageSize: 50,
+                        fields: 'files(id, name, modifiedTime, driveId)',
+                        orderBy: 'name',
+                        corpora: 'allDrives',
+                        includeItemsFromAllDrives: true,
+                        supportsAllDrives: true
+                    });
+
+                    folders = response.result.files || [];
                 }
-
-                const response = await gapi.client.drive.files.list({
-                    q: query,
-                    pageSize: 20,
-                    fields: 'files(id, name, modifiedTime)',
-                    orderBy: 'name'
-                });
-
-                const folders = response.result.files;
 
                 if (!folders || folders.length === 0) {
                     folderList.innerHTML = `
                         <div class="empty-state">
                             <div class="empty-state-icon">📂</div>
                             <div class="empty-state-title">No folders found</div>
-                            <div>Try a different search term</div>
+                            <div>${APP.currentFolderId ? 'No subfolders in this location' : (searchTerm ? 'Try a different search term' : 'No folders in your Drive')}</div>
                         </div>
                     `;
                     return;
                 }
 
-                folderList.innerHTML = folders.map(folder => `
-                    <div class="file-item" onclick='selectFolder("${folder.id}", "${folder.name.replace(/'/g, "\\'")}");'>
-                        <span class="file-icon">📂</span>
-                        <div class="file-info">
-                            <div class="file-name">${folder.name}</div>
+                folderList.innerHTML = folders.map(folder => {
+                    let icon = '📂';
+                    let location = 'My Drive';
+
+                    if (folder.isSharedDrive) {
+                        icon = '🔗';
+                        location = 'Shared Drive';
+                    } else if (folder.driveId) {
+                        icon = '📂';
+                        location = 'Shared Drive';
+                    } else if (folder.isMyDrive) {
+                        icon = '📂';
+                        location = 'My Drive';
+                    }
+
+                    return `
+                        <div class="file-item" onclick='navigateToFolder("${folder.id}", "${folder.name.replace(/'/g, "\\'")}");'>
+                            <span class="file-icon">${icon}</span>
+                            <div class="file-info">
+                                <div class="file-name">${folder.name}</div>
+                                <div class="file-meta">${location}</div>
+                            </div>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
+
+                // Show breadcrumb
+                updateBreadcrumb();
 
             } catch (error) {
                 console.error('Error loading folders:', error);
@@ -1334,27 +1624,116 @@
             }
         }
 
-        function selectFolder(folderId, folderName) {
+        function navigateToFolder(folderId, folderName) {
+            // Add current folder to path
+            APP.folderPath.push({
+                id: APP.currentFolderId,
+                name: APP.currentFolderName
+            });
+
+            // Set new current folder
             APP.currentFolderId = folderId;
             APP.currentFolderName = folderName;
 
-            // Show breadcrumb
-            document.getElementById('currentFolderBreadcrumb').style.display = 'flex';
-            document.getElementById('currentFolderName').textContent = folderName;
+            // Update breadcrumb
+            updateBreadcrumb();
+
+            // Load subfolders
+            searchFolders();
 
             // Load files from this folder
             searchFiles();
         }
 
-        function clearFolder() {
+        function navigateToRoot() {
             APP.currentFolderId = null;
             APP.currentFolderName = null;
+            APP.folderPath = [];
 
-            // Hide breadcrumb
-            document.getElementById('currentFolderBreadcrumb').style.display = 'none';
-
-            // Reload all files
+            updateBreadcrumb();
+            searchFolders();
             searchFiles();
+        }
+
+        function navigateBack() {
+            if (APP.folderPath.length === 0) {
+                navigateToRoot();
+                return;
+            }
+
+            // Get parent folder from path
+            const parent = APP.folderPath.pop();
+            APP.currentFolderId = parent.id;
+            APP.currentFolderName = parent.name;
+
+            updateBreadcrumb();
+            searchFolders();
+            searchFiles();
+        }
+
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('folderBreadcrumb');
+            const breadcrumbPath = document.getElementById('breadcrumbPath');
+
+            if (!APP.currentFolderId && APP.folderPath.length === 0) {
+                // At root - hide breadcrumb
+                breadcrumb.style.display = 'none';
+                return;
+            }
+
+            // Show breadcrumb
+            breadcrumb.style.display = 'block';
+
+            // Build path
+            let pathHtml = '';
+
+            // Add parent folders
+            APP.folderPath.forEach((folder, index) => {
+                if (folder.id && folder.name) {
+                    pathHtml += `
+                        <span style="color: var(--text-light);">›</span>
+                        <button class="btn btn-outline" onclick="navigateToPathIndex(${index})" style="padding: 0.5rem 1rem;">
+                            ${folder.name}
+                        </button>
+                    `;
+                }
+            });
+
+            // Add current folder
+            if (APP.currentFolderName) {
+                pathHtml += `
+                    <span style="color: var(--text-light);">›</span>
+                    <span style="padding: 0.5rem 1rem; font-weight: 600; color: var(--primary);">${APP.currentFolderName}</span>
+                `;
+            }
+
+            breadcrumbPath.innerHTML = pathHtml;
+        }
+
+        function navigateToPathIndex(index) {
+            // Navigate to a specific folder in the path
+            const targetFolder = APP.folderPath[index];
+
+            // Remove all folders after this index
+            APP.folderPath = APP.folderPath.slice(0, index);
+
+            // Set current folder
+            APP.currentFolderId = targetFolder.id;
+            APP.currentFolderName = targetFolder.name;
+
+            updateBreadcrumb();
+            searchFolders();
+            searchFiles();
+        }
+
+        // Keep selectFolder for backward compatibility
+        function selectFolder(folderId, folderName) {
+            navigateToFolder(folderId, folderName);
+        }
+
+        // Keep clearFolder for backward compatibility
+        function clearFolder() {
+            navigateToRoot();
         }
 
         // File Operations
@@ -1365,6 +1744,18 @@
         async function searchFiles() {
             const searchTerm = document.getElementById('fileSearch').value.trim();
             const fileList = document.getElementById('fileList');
+
+            // If at root level and no search term, show message to select a folder
+            if (!APP.currentFolderId && !searchTerm) {
+                fileList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📂</div>
+                        <div class="empty-state-title">Select a folder first</div>
+                        <div>Navigate to a folder above to see PDF files, or use search to find files by name</div>
+                    </div>
+                `;
+                return;
+            }
 
             fileList.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading files...</span></div>';
 
@@ -1383,9 +1774,12 @@
 
                 const response = await gapi.client.drive.files.list({
                     q: query,
-                    pageSize: 30,
-                    fields: 'files(id, name, size, modifiedTime, webViewLink)',
-                    orderBy: 'modifiedTime desc'
+                    pageSize: 50,
+                    fields: 'files(id, name, size, modifiedTime, webViewLink, driveId)',
+                    orderBy: 'modifiedTime desc',
+                    corpora: 'allDrives',  // Search in both My Drive and Shared Drives
+                    includeItemsFromAllDrives: true,  // Include items from Shared Drives
+                    supportsAllDrives: true  // Support Shared Drives API
                 });
 
                 const files = response.result.files;
@@ -1395,7 +1789,7 @@
                         <div class="empty-state">
                             <div class="empty-state-icon">📄</div>
                             <div class="empty-state-title">No PDF files found</div>
-                            <div>Try a different search term or upload PDFs to your Google Drive</div>
+                            <div>${APP.currentFolderId ? 'No PDF files in this folder' : 'Try a different search term'}</div>
                         </div>
                     `;
                     return;
@@ -1408,13 +1802,14 @@
                         month: 'short',
                         day: 'numeric'
                     });
+                    const location = file.driveId ? 'Shared Drive' : 'My Drive';
 
                     return `
                         <div class="file-item" onclick='selectFile(${JSON.stringify(file)})'>
                             <span class="file-icon">📄</span>
                             <div class="file-info">
                                 <div class="file-name">${file.name}</div>
-                                <div class="file-meta">${size} • Modified ${date}</div>
+                                <div class="file-meta">${size} • ${location} • Modified ${date}</div>
                             </div>
                         </div>
                     `;
@@ -1481,7 +1876,14 @@
             statusDiv.style.display = 'block';
 
             try {
-                const callbackUrl = localStorage.getItem('callback_url');
+                // Use configured callback URL or default to local server
+                let callbackUrl = localStorage.getItem('callback_url');
+                if (!callbackUrl || callbackUrl.trim() === '') {
+                    // Auto-configure local server callback
+                    callbackUrl = `${window.location.origin}/api/callback`;
+                    console.log('Using auto-configured callback URL:', callbackUrl);
+                }
+
                 const callbackToken = localStorage.getItem('callback_token');
 
                 const payload = {
@@ -1495,30 +1897,40 @@
                     timestamp: new Date().toISOString()
                 };
 
-                // Add callback URL and token if configured
-                if (callbackUrl) {
-                    payload.callbackUrl = callbackUrl;
-                }
+                // Always add callback URL (either configured or auto-configured)
+                payload.callbackUrl = callbackUrl;
+
+                // Add callback token if configured
                 if (callbackToken) {
                     payload.callbackToken = callbackToken;
                 }
 
-                const response = await fetch(webhookUrl, {
+                // Use proxy endpoint to avoid CORS issues
+                const proxyUrl = `${window.location.origin}/api/proxy-webhook`;
+                const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        webhookUrl: webhookUrl,
+                        data: payload
+                    })
                 });
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const result = await response.json().catch(() => ({}));
+                const proxyResult = await response.json().catch(() => ({}));
+                if (!proxyResult.success) {
+                    throw new Error(`n8n webhook returned ${proxyResult.status}`);
+                }
+
+                const result = proxyResult.data || {};
 
                 // Check if this is a 202 Accepted (async processing)
-                if (response.status === 202 || result.jobId) {
+                if (proxyResult.status === 202 || result.jobId) {
                     // Show processing status
                     statusDiv.innerHTML = `
                         <div class="alert alert-success">
@@ -1528,11 +1940,14 @@
                                 <div>File: ${APP.selectedFile.name}</div>
                                 <div>PBS Code: ${pbsCode}</div>
                                 <div>Job ID: ${result.jobId || 'N/A'}</div>
+                                <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                                    📡 Callback: ${callbackUrl}
+                                </div>
                             </div>
                         </div>
                     `;
 
-                    // Show results card with processing status
+                    // Show results card with processing status (always with callback URL now)
                     showJobProcessing(result.jobId, callbackUrl);
                 } else {
                     // Immediate response (200 OK)
@@ -1548,6 +1963,9 @@
                         </div>
                     `;
                 }
+
+                // Save PBS code for next time
+                localStorage.setItem('last_pbs_code', pbsCode);
 
                 document.getElementById('pbsCode').value = '';
                 clearSelection();
@@ -1603,21 +2021,36 @@
             const jobStatusText = document.getElementById('jobStatusText');
             const jobInfo = document.getElementById('jobInfo');
             const jobIdDisplay = document.getElementById('jobIdDisplay');
+            const progressInfo = document.getElementById('progressInfo');
             const manualInputSection = document.getElementById('manualInputSection');
 
             // Show results card
             resultsCard.style.display = 'block';
 
-            // Show processing status
+            // Show processing status with spinner
             jobStatusBadge.style.display = 'inline-flex';
             jobStatusBadge.className = 'status-badge';
             jobStatusBadge.style.background = '#fff3cd';
             jobStatusBadge.style.color = '#856404';
-            jobStatusText.textContent = 'Processing';
+            jobStatusBadge.style.gap = '0.5rem';
+            jobStatusBadge.innerHTML = `
+                <div class="spinner" style="width: 1rem; height: 1rem; border-width: 2px;"></div>
+                <span>Processing...</span>
+            `;
 
             // Show job ID
             jobInfo.style.display = 'block';
             jobIdDisplay.textContent = jobId || 'N/A';
+
+            // Show progress section with initial values
+            if (progressInfo) {
+                progressInfo.style.display = 'block';
+                document.getElementById('processedCount').textContent = '0';
+                document.getElementById('toProcessCount').textContent = '0';
+                document.getElementById('percentageDisplay').textContent = '0%';
+                document.getElementById('progressBar').style.width = '0%';
+                document.getElementById('progressBarText').textContent = '0%';
+            }
 
             // Show manual input if no callback URL
             if (!callbackUrl) {
@@ -1655,30 +2088,227 @@
             }
         }
 
+        async function checkJobStatus(jobId) {
+            const supabaseUrl = localStorage.getItem('supabase_url');
+            const supabaseKey = localStorage.getItem('supabase_key');
+
+            if (!supabaseUrl || !supabaseKey) {
+                throw new Error('Supabase configuration missing');
+            }
+
+            const response = await fetch(`${supabaseUrl}/rest/v1/rag_diagnostics?job_id=eq.${jobId}&order=timestamp.desc`, {
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Supabase error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+        }
+
         async function pollForResult(jobId) {
             try {
-                const response = await fetch(`/api/result/${jobId}`);
+                const statusRecords = await checkJobStatus(jobId);
 
-                if (response.status === 200) {
-                    // Result is ready!
-                    const result = await response.json();
-                    console.log('Result received:', result);
+                if (!statusRecords || statusRecords.length === 0) {
+                    // No records yet - continue polling
+                    console.log('No records yet for job:', jobId);
+                    return;
+                }
 
+                // Get latest status record
+                const latestStatus = statusRecords[0];
+                console.log('Latest status:', latestStatus);
+
+                // Update UI with progress info
+                updateJobProgress(latestStatus);
+
+                // Check if processing is complete
+                if (latestStatus.status === 'Completed' || latestStatus.status === 'completed' || latestStatus.status === 'Semantic Fix Completed') {
                     // Stop polling
                     stopPolling();
 
-                    // Display the result
-                    await displayResult(result);
-                } else if (response.status === 202) {
-                    // Still processing - continue polling
-                    console.log('Job still processing...');
-                } else {
-                    // Error
-                    console.error('Error polling for result:', response.status);
+                    // Fetch final result (if available)
+                    // For now just show completion status
+                    showCompletionStatus(latestStatus);
+                } else if (latestStatus.status && latestStatus.status.endsWith('Aborted')) {
+                    // Process aborted
+                    stopPolling();
+                    showErrorStatus(latestStatus.status, latestStatus.error_message);
+                } else if (latestStatus.status === 'Error' || latestStatus.status === 'error' || latestStatus.error_message) {
+                    stopPolling();
+                    showErrorStatus('Error', latestStatus.error_message || 'Processing error');
                 }
             } catch (error) {
                 console.error('Error polling for result:', error);
                 // Don't stop polling on network errors - might be temporary
+            }
+        }
+
+        function updateJobProgress(status) {
+            const jobStatusBadge = document.getElementById('jobStatusBadge');
+            const jobStatusText = document.getElementById('jobStatusText');
+
+            if (!jobStatusBadge) return;
+
+            const processed = status.processed || 0;
+            const toProcess = status.to_process || 0;
+            const percentage = toProcess > 0
+                ? Math.round((processed / toProcess) * 100)
+                : 0;
+
+            // Determine icon and color based on status
+            let statusClass = '';
+            let statusIcon = '⏳';
+
+            const statusText = status.status || 'Processing';
+
+            if (statusText === 'Completed' || statusText === 'completed' || statusText === 'Semantic Fix Completed') {
+                statusIcon = '✅';
+                statusClass = 'connected';
+            } else if (statusText.includes('Aborted')) {
+                statusIcon = '⚠️';
+            } else if (statusText === 'Error' || statusText === 'error') {
+                statusIcon = '❌';
+            }
+
+            jobStatusBadge.className = `status-badge ${statusClass}`;
+            jobStatusBadge.style.display = 'inline-flex';
+            jobStatusBadge.style.gap = '0.5rem';
+            jobStatusBadge.innerHTML = `
+                ${statusClass ? '<span class="status-dot"></span>' : `<div class="spinner" style="width: 1rem; height: 1rem; border-width: 2px;"></div>`}
+                <span>${statusIcon} ${statusText}</span>
+            `;
+
+            // Update progress info section
+            const progressInfo = document.getElementById('progressInfo');
+            if (progressInfo) {
+                progressInfo.style.display = 'block';
+
+                // Update counts
+                document.getElementById('processedCount').textContent = processed;
+                document.getElementById('toProcessCount').textContent = toProcess;
+                document.getElementById('percentageDisplay').textContent = percentage + '%';
+
+                // Update progress bar
+                const progressBar = document.getElementById('progressBar');
+                const progressBarText = document.getElementById('progressBarText');
+                if (progressBar) {
+                    progressBar.style.width = percentage + '%';
+                    progressBarText.textContent = percentage + '%';
+
+                    // Change color based on progress
+                    if (percentage === 100) {
+                        progressBar.style.background = 'linear-gradient(90deg, var(--success) 0%, var(--success-dark) 100%)';
+                    } else if (percentage >= 75) {
+                        progressBar.style.background = 'linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%)';
+                    } else {
+                        progressBar.style.background = 'linear-gradient(90deg, var(--success) 0%, var(--success-light) 100%)';
+                    }
+                }
+            }
+        }
+
+        async function showCompletionStatus(status) {
+            const jobStatusBadge = document.getElementById('jobStatusBadge');
+            const jobStatusText = document.getElementById('jobStatusText');
+            const manualInputSection = document.getElementById('manualInputSection');
+
+            if (jobStatusBadge) {
+                jobStatusBadge.className = 'status-badge connected';
+                jobStatusBadge.style.display = 'inline-flex';
+                jobStatusBadge.innerHTML = `
+                    <span class="status-dot"></span>
+                    <span>✅ Completed</span>
+                `;
+            }
+
+            if (jobStatusText) {
+                const percentage = status.to_process > 0
+                    ? Math.round((status.processed / status.to_process) * 100)
+                    : 100;
+                jobStatusText.innerHTML = `Completed: ${status.processed || 0}/${status.to_process || 0} items (${percentage}%)`;
+            }
+
+            // Try to fetch result from local server
+            try {
+                console.log('Attempting to fetch result from local server...');
+                const result = await pollLocalServerForResult(APP.currentJobId);
+
+                if (result && result.status === 'ready') {
+                    console.log('Result found on local server:', result);
+                    await displayResult(result);
+                    return; // Result found and displayed
+                }
+            } catch (error) {
+                console.log('Could not fetch from local server:', error.message);
+            }
+
+            // Show manual input for JSON paste if automatic retrieval failed
+            if (manualInputSection) {
+                manualInputSection.style.display = 'block';
+            }
+        }
+
+        async function pollLocalServerForResult(jobId, maxAttempts = 10, delayMs = 2000) {
+            /**
+             * Polls the local server for results
+             * n8n might take a few seconds to send the callback after marking as completed
+             */
+            const serverUrl = window.location.origin; // e.g., http://localhost:8000
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    console.log(`Polling local server (attempt ${attempt}/${maxAttempts})...`);
+
+                    const response = await fetch(`${serverUrl}/api/result/${jobId}`);
+                    const data = await response.json();
+
+                    if (response.status === 200 && data.status === 'ready') {
+                        console.log('✅ Result received from local server');
+                        return data;
+                    }
+
+                    // Wait before next attempt
+                    if (attempt < maxAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, delayMs));
+                    }
+                } catch (error) {
+                    console.error(`Error polling local server (attempt ${attempt}):`, error);
+
+                    // If server is not running, fail fast
+                    if (error.message.includes('Failed to fetch')) {
+                        throw new Error('Local server not accessible. Make sure server.py is running.');
+                    }
+                }
+            }
+
+            throw new Error('Result not found after maximum polling attempts');
+        }
+
+        function showErrorStatus(statusText, errorMessage) {
+            const jobStatusBadge = document.getElementById('jobStatusBadge');
+            const jobStatusText = document.getElementById('jobStatusText');
+
+            if (jobStatusBadge) {
+                jobStatusBadge.style.display = 'inline-flex';
+                jobStatusBadge.style.background = '#f8d7da';
+                jobStatusBadge.style.color = '#721c24';
+                jobStatusBadge.innerHTML = `
+                    <span>❌</span>
+                    <span>${statusText}</span>
+                `;
+            }
+
+            if (jobStatusText) {
+                jobStatusText.innerHTML = errorMessage || 'An error occurred during processing';
+                jobStatusText.style.color = '#721c24';
             }
         }
 
@@ -1701,15 +2331,19 @@
 
         async function displayResult(result) {
             const jobStatusBadge = document.getElementById('jobStatusBadge');
-            const jobStatusText = document.getElementById('jobStatusText');
             const manualInputSection = document.getElementById('manualInputSection');
             const jsonResultSection = document.getElementById('jsonResultSection');
             const resultSummary = document.getElementById('resultSummary');
             const jsonDataView = document.getElementById('jsonDataView');
 
-            // Update status to ready
+            // Update status to ready with checkmark
             jobStatusBadge.className = 'status-badge connected';
-            jobStatusText.textContent = 'Ready';
+            jobStatusBadge.style.display = 'inline-flex';
+            jobStatusBadge.style.gap = '0.5rem';
+            jobStatusBadge.innerHTML = `
+                <span class="status-dot"></span>
+                <span>Ready</span>
+            `;
 
             // Hide manual input
             manualInputSection.style.display = 'none';
@@ -1750,11 +2384,20 @@
                 APP.originalJsonData = jsonData;
             }
 
-            // Show summary
+            // Show summary with all callback fields
+            const durationLabel = result.durationSec
+                ? (result.durationSec >= 60
+                    ? `${Math.floor(result.durationSec / 60)}m ${result.durationSec % 60}s`
+                    : `${result.durationSec}s`)
+                : null;
+
             resultSummary.innerHTML = `
-                <div>File: ${result.fileName || 'N/A'}</div>
-                ${result.items ? `<div>Items found: ${result.items}</div>` : ''}
-                ${result.durationSec ? `<div>Processing time: ${result.durationSec}s</div>` : ''}
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+                    ${result.fileName ? `<div><strong>File:</strong> ${result.fileName}</div>` : ''}
+                    ${result.jobId ? `<div><strong>Job ID:</strong> ${result.jobId}</div>` : ''}
+                    ${result.items != null ? `<div><strong>Procedures:</strong> ${result.items}</div>` : ''}
+                    ${durationLabel ? `<div><strong>Processing time:</strong> ${durationLabel}</div>` : ''}
+                </div>
             `;
 
             // Show JSON in raw view (read-only)
@@ -1799,11 +2442,14 @@
             }
         }
 
-        async function validateAndSendToN8n() {
-            const validationWebhookUrl = localStorage.getItem('validation_webhook_url');
+        async function validateAndSendToN8n(workflowType = 'sop') {
+            // Determine which webhook URL to use based on workflow type
+            const webhookUrlKey = workflowType === 'annex' ? 'annex_webhook_url' : 'validation_webhook_url';
+            const webhookUrl = localStorage.getItem(webhookUrlKey);
+            const workflowName = workflowType === 'annex' ? 'Annex' : 'SOP TTC';
 
-            if (!validationWebhookUrl) {
-                alert('❌ Validation Webhook URL not configured!\n\nPlease go to Settings and configure the Validation Webhook URL.');
+            if (!webhookUrl) {
+                alert(`❌ ${workflowName} Webhook URL not configured!\n\nPlease go to Settings and configure the ${workflowName} Webhook URL.`);
                 return;
             }
 
@@ -1821,35 +2467,64 @@
             }
 
             try {
-                // Prepare JSON with updated procedures (including 'page' field)
-                // Send only procedures array, without PBS code or other metadata
+                // Prepare JSON with updated procedures including all fields
                 const proceduresWithPage = APP.procedures.map(proc => ({
                     procedure: proc.procedure,
+                    title: proc.title || '',
+                    paragraph: proc.paragraph || '',
                     category: proc.category,
-                    page: proc.page  // Include original page field
+                    page: proc.page
                 }));
+
+                // Use configured validation callback URL or default to local server
+                let validationCallbackUrl = localStorage.getItem('validation_callback_url');
+                if (!validationCallbackUrl || validationCallbackUrl.trim() === '') {
+                    validationCallbackUrl = `${window.location.origin}/api/validation-callback`;
+                    console.log('Using auto-configured validation callback URL:', validationCallbackUrl);
+                }
+
+                // Prepare validated file name (add _Validated before .json extension)
+                const originalFileName = APP.originalJsonData?.file_name || APP.originalJsonData?.fileName || '';
+                let validatedFileName = originalFileName;
+                if (originalFileName) {
+                    if (originalFileName.endsWith('.json')) {
+                        validatedFileName = originalFileName.replace(/\.json$/, '_Validated.json');
+                    } else {
+                        validatedFileName = originalFileName + '_Validated.json';
+                    }
+                }
 
                 const jsonData = {
                     procedures: proceduresWithPage,
-                    file_name: APP.originalJsonData?.file_name || APP.originalJsonData?.fileName || ''
+                    file_name: validatedFileName,
+                    jobId: APP.currentJobId || APP.originalJsonData?.jobId || '',
+                    callbackUrl: validationCallbackUrl
                 };
 
-                // Send to validation webhook
+                // Send to validation webhook via proxy (to avoid CORS issues)
                 const statusDiv = document.createElement('div');
-                statusDiv.className = 'alert alert-info';
+                statusDiv.className = 'loading';
                 statusDiv.style.marginTop = '1rem';
+                statusDiv.style.padding = '1rem';
+                statusDiv.style.background = 'var(--bg-secondary)';
+                statusDiv.style.borderRadius = '0.5rem';
                 statusDiv.innerHTML = `
-                    <span class="alert-icon">⏳</span>
-                    <div class="alert-content">Sending validated data to n8n...</div>
+                    <div class="spinner"></div>
+                    <span>Sending validated data to n8n (${workflowName})...</span>
                 `;
                 document.getElementById('jsonResultSection').appendChild(statusDiv);
 
-                const response = await fetch(validationWebhookUrl, {
+                // Use proxy endpoint to avoid CORS issues
+                const proxyUrl = `${window.location.origin}/api/proxy-webhook`;
+                const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(jsonData)
+                    body: JSON.stringify({
+                        webhookUrl: webhookUrl,
+                        data: jsonData
+                    })
                 });
 
                 statusDiv.remove();
@@ -1858,11 +2533,17 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const result = await response.json().catch(() => ({}));
+                const proxyResult = await response.json().catch(() => ({}));
+                const result = proxyResult.data || {};
 
-                alert(`✅ Validation successful!\n\nData sent to n8n successfully.\n\nProcedures: ${APP.procedures.length}\nResponse: ${response.status} ${response.statusText}`);
+                // Check if the proxied request was successful
+                if (!proxyResult.success) {
+                    throw new Error(`n8n webhook returned ${proxyResult.status}`);
+                }
 
-                console.log('Validation response:', result);
+                alert(`✅ ${workflowName} generation started!\n\nData sent to n8n successfully.\n\nWorkflow: ${workflowName}\nProcedures: ${APP.procedures.length}\nResponse: ${proxyResult.status}`);
+
+                console.log(`${workflowName} response:`, result);
 
             } catch (error) {
                 console.error('Error sending to n8n:', error);
@@ -1890,20 +2571,54 @@
             procedureCount.textContent = `${APP.procedures.length} procedure${APP.procedures.length !== 1 ? 's' : ''}`;
 
             procedureList.innerHTML = APP.procedures.map((proc, index) => {
-                const categoryClass = proc.category ? `category-${proc.category.replace(/\s+/g, '')}` : 'category-General';
+                const categoryClass = proc.category
+                    ? `category-${proc.category.replace(/_/g, '-')}`
+                    : 'category-General';
+                const categoryLabel = proc.category
+                    ? proc.category.replace(/_/g, ' ')
+                    : 'Uncategorized';
 
                 return `
                     <div class="procedure-card" data-index="${index}">
                         <div class="procedure-header">
                             <div class="procedure-number">
                                 Procedure #${index + 1}
-                                <span class="${categoryClass} category-badge">${proc.category || 'Uncategorized'}</span>
+                                <span class="${categoryClass} category-badge">${categoryLabel}</span>
                             </div>
                             <div class="procedure-actions">
+                                <button class="btn-add" onclick="addProcedureAt(${index + 1})" title="Add procedure after this one">
+                                    ➕ Add
+                                </button>
                                 <button class="btn-delete" onclick="deleteProcedure(${index})">
                                     🗑️ Delete
                                 </button>
                             </div>
+                        </div>
+
+                        <div class="procedure-field">
+                            <label>Title</label>
+                            <input
+                                type="text"
+                                class="form-input"
+                                data-index="${index}"
+                                data-field="title"
+                                value="${(proc.title || '').replace(/"/g, '&quot;')}"
+                                onchange="updateProcedure(${index}, 'title', this.value)"
+                                placeholder="Procedure title..."
+                            >
+                        </div>
+
+                        <div class="procedure-field">
+                            <label>Paragraph / Section</label>
+                            <input
+                                type="text"
+                                class="form-input"
+                                data-index="${index}"
+                                data-field="paragraph"
+                                value="${(proc.paragraph || '').replace(/"/g, '&quot;')}"
+                                onchange="updateProcedure(${index}, 'paragraph', this.value)"
+                                placeholder="e.g. 1.1.General Instructions"
+                            >
                         </div>
 
                         <div class="procedure-field">
@@ -1928,7 +2643,7 @@
                                 <option value="">Select category...</option>
                                 ${CATEGORIES.map(cat => `
                                     <option value="${cat}" ${proc.category === cat ? 'selected' : ''}>
-                                        ${cat}
+                                        ${cat.replace(/_/g, ' ')}
                                     </option>
                                 `).join('')}
                             </select>
@@ -1986,6 +2701,36 @@
             console.log(`Deleted procedure at index ${index}`);
         }
 
+        function addProcedureAt(index) {
+            // Create a new empty procedure
+            const newProcedure = {
+                title: '',
+                paragraph: '',
+                procedure: '',
+                category: '',
+                page: APP.procedures[index - 1]?.page || 1 // Use same page as previous procedure
+            };
+
+            // Insert at specified position
+            APP.procedures.splice(index, 0, newProcedure);
+            renderProcedureEditor();
+
+            // Scroll to the new procedure
+            setTimeout(() => {
+                const newCard = document.querySelector(`[data-index="${index}"]`);
+                if (newCard) {
+                    newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Highlight the new card briefly
+                    newCard.style.border = '2px solid var(--success)';
+                    setTimeout(() => {
+                        newCard.style.border = '';
+                    }, 2000);
+                }
+            }, 100);
+
+            console.log(`Added new procedure at index ${index}`);
+        }
+
         function toggleRawJson() {
             const rawJsonView = document.getElementById('rawJsonView');
             const toggleText = document.getElementById('rawJsonToggleText');
@@ -1999,6 +2744,91 @@
             }
         }
 
+        async function loadQuickValidation() {
+            const pbsCodeInput = document.getElementById('quickValidationPbsCode');
+            const fileInput = document.getElementById('quickValidationFile');
+            const pbsCode = pbsCodeInput.value.trim();
+            const file = fileInput.files[0];
+
+            if (!pbsCode || !file) {
+                alert('Please provide both PBS Code and JSON file');
+                return;
+            }
+
+            try {
+                // Read the JSON file
+                const fileContent = await file.text();
+                let jsonData;
+
+                try {
+                    jsonData = JSON.parse(fileContent);
+                } catch (parseError) {
+                    alert('Invalid JSON file. Please select a valid JSON file.');
+                    return;
+                }
+
+                // Validate that it contains procedures
+                let procedures = [];
+                if (Array.isArray(jsonData)) {
+                    procedures = jsonData;
+                } else if (jsonData.procedures && Array.isArray(jsonData.procedures)) {
+                    procedures = jsonData.procedures;
+                } else {
+                    alert('The JSON file does not contain a valid procedures array.');
+                    return;
+                }
+
+                if (procedures.length === 0) {
+                    alert('The JSON file contains no procedures.');
+                    return;
+                }
+
+                // Set up the app state
+                APP.currentJobId = `quick-validation-${Date.now()}`;
+                APP.procedures = procedures;
+                APP.originalJsonData = Array.isArray(jsonData) ? { procedures: jsonData, pbsCode } : { ...jsonData, pbsCode };
+
+                // Show results card and hide other cards
+                document.getElementById('resultsCard').style.display = 'block';
+                document.getElementById('jobInfo').style.display = 'block';
+                document.getElementById('progressInfo').style.display = 'none';
+                document.getElementById('manualInputSection').style.display = 'none';
+                document.getElementById('jsonResultSection').style.display = 'block';
+
+                // Update job info
+                document.getElementById('jobIdDisplay').textContent = APP.currentJobId;
+
+                // Show success message
+                const resultSummary = document.getElementById('resultSummary');
+                resultSummary.innerHTML = `
+                    <div>Loaded from: <strong>${file.name}</strong></div>
+                    <div>Procedures found: <strong>${procedures.length}</strong></div>
+                    <div>PBS Code: <strong>${pbsCode}</strong></div>
+                `;
+
+                // Render the procedure editor
+                renderProcedureEditor();
+
+                // Scroll to results
+                document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                // Clear the inputs
+                pbsCodeInput.value = '';
+                fileInput.value = '';
+                document.getElementById('quickValidationBtn').disabled = true;
+
+                console.log('Quick validation loaded successfully:', {
+                    jobId: APP.currentJobId,
+                    pbsCode,
+                    procedureCount: procedures.length
+                });
+
+            } catch (error) {
+                console.error('Error loading quick validation:', error);
+                alert(`Error loading file: ${error.message}`);
+            }
+        }
+
         function clearResults() {
             if (confirm('Clear all results and start over?')) {
                 // Stop polling if active
@@ -2007,6 +2837,7 @@
                 // Hide and clear all result sections
                 document.getElementById('resultsCard').style.display = 'none';
                 document.getElementById('jobInfo').style.display = 'none';
+                document.getElementById('progressInfo').style.display = 'none';
                 document.getElementById('manualInputSection').style.display = 'none';
                 document.getElementById('jsonResultSection').style.display = 'none';
 
@@ -2019,6 +2850,9 @@
                 document.getElementById('manualJsonInput').value = '';
                 document.getElementById('jsonDataView').value = '';
                 document.getElementById('procedureList').innerHTML = '';
+                document.getElementById('quickValidationPbsCode').value = '';
+                document.getElementById('quickValidationFile').value = '';
+                document.getElementById('quickValidationBtn').disabled = true;
 
                 // Reset app state
                 APP.currentJobId = null;
@@ -2036,6 +2870,20 @@
             document.getElementById('fileSearch').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchFiles();
             });
+
+            // Quick validation listeners
+            const quickPbsCode = document.getElementById('quickValidationPbsCode');
+            const quickFile = document.getElementById('quickValidationFile');
+            const quickBtn = document.getElementById('quickValidationBtn');
+
+            function updateQuickValidationButton() {
+                const hasPbsCode = quickPbsCode.value.trim() !== '';
+                const hasFile = quickFile.files.length > 0;
+                quickBtn.disabled = !(hasPbsCode && hasFile);
+            }
+
+            quickPbsCode.addEventListener('input', updateQuickValidationButton);
+            quickFile.addEventListener('change', updateQuickValidationButton);
         }
     </script>
 </body>
