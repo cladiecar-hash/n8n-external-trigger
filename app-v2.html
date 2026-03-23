@@ -2497,7 +2497,7 @@
                 const jsonData = {
                     procedures: proceduresWithPage,
                     file_name: validatedFileName,
-                    pbsCode: APP.originalJsonData?.pbsCode || '',
+                    pbs_code: APP.originalJsonData?.pbs_code || '',
                     jobId: APP.currentJobId || APP.originalJsonData?.jobId || '',
                     callbackUrl: validationCallbackUrl
                 };
@@ -2792,8 +2792,8 @@
                 const extractedFileName = jsonData.file_name || jsonData.fileName || file.name;
 
                 APP.originalJsonData = Array.isArray(jsonData)
-                    ? { procedures: jsonData, pbsCode, file_name: extractedFileName }
-                    : { ...jsonData, pbsCode, file_name: extractedFileName };
+                    ? { procedures: jsonData, pbs_code: pbsCode, file_name: extractedFileName }
+                    : { ...jsonData, pbs_code: pbsCode, file_name: extractedFileName };
 
                 // Show results card and hide other cards
                 document.getElementById('resultsCard').style.display = 'block';
